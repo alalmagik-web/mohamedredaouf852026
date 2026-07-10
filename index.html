@@ -26,6 +26,7 @@
         .btn-sync { background: #fbbc05; color: #000; } .btn-sync:hover { background: #e6ac00; }
         .btn-login { background: #ea4335; color: white; } .btn-login:hover { background: #d33426; }
         .btn-fix-emails { background: #8b5cf6; color: white; } .btn-fix-emails:hover { background: #7c3aed; }
+        .btn-export-excel { background: #059669; color: white; } .btn-export-excel:hover { background: #047857; }
         .firebase-status { background: rgba(255, 255, 255, 0.2); padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .firebase-status.online { background: rgba(52, 168, 83, 0.3); border-left: 3px solid #34a853; }
         .firebase-status.offline { background: rgba(234, 67, 53, 0.3); border-left: 3px solid #ea4335; }
@@ -272,10 +273,11 @@
     <div class="firebase-controls">
       <button id="useLocalBtn" class="firebase-btn btn-local"><i class="fas fa-hdd"></i> تخزين محلي</button>
       <button id="useCloudBtn" class="firebase-btn btn-cloud"><i class="fas fa-cloud"></i> تخزين سحابي</button>
-      <button id="syncDataBtn" class="firebase-btn btn-sync"><i class="fas fa-sync-alt"></i> مزامنة البيانات</button>
+      <button id="syncDataBtn" class="firebase-btn btn-sync"><i class="fas fa-sync-alt"></i> مزامنة</button>
       <button id="loginBtn" class="firebase-btn btn-login"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
       <button id="fixEmailsBtn" class="firebase-btn btn-fix-emails"><i class="fas fa-envelope"></i> تصحيح الأيميلات</button>
       <button id="adminViewBtn" class="btn-admin"><i class="fas fa-eye"></i> عرض الكل (مشرف)</button>
+      <button id="exportAllDataBtn" class="firebase-btn btn-export-excel"><i class="fas fa-file-excel"></i> تصدير جميع البيانات</button>
       <div id="firebaseStatus" class="firebase-status offline"><i class="fas fa-wifi"></i> غير متصل</div>
     </div>
   </div>
@@ -473,7 +475,8 @@
   </div>
 
   <script>
-    const firebaseConfig = {
+    // ===== إعدادات Firebase =====
+    var firebaseConfig = {
       apiKey: "AIzaSyCTQUJV6erfDYbjId7xpuRDPwTmaGGk4e4",
       authDomain: "mohamedreda-718c9.firebaseapp.com",
       projectId: "mohamedreda-718c9",
@@ -483,21 +486,22 @@
       measurementId: "G-9QP9FDF9MR"
     };
     
-    let firebaseApp, firebaseAuth, firebaseDb;
-    let isFirebaseInitialized = false;
+    var firebaseApp, firebaseAuth, firebaseDb;
+    var isFirebaseInitialized = false;
     
     try {
       firebaseApp = firebase.initializeApp(firebaseConfig);
       firebaseAuth = firebase.auth();
       firebaseDb = firebase.database();
       isFirebaseInitialized = true;
-      console.log("✅ Firebase initialized successfully");
+      console.log("✅ Firebase initialized");
     } catch (error) {
-      console.log("❌ Local storage only - Firebase init error:", error);
+      console.log("❌ Firebase init error:", error);
     }
     
     document.addEventListener("DOMContentLoaded", function() {
-      const defaultTeachers = [
+      // ===== البيانات الافتراضية =====
+      var defaultTeachers = [
         { id: 't1', name: "عبدالله الزهراني", subject: "اجتماعيات", icon: "fa-globe" },
         { id: 't2', name: "معاذ الشيخ", subject: "فنية", icon: "fa-palette" },
         { id: 't3', name: "خالد المالكي", subject: "لغة عربية", icon: "fa-book" },
@@ -507,110 +511,112 @@
         { id: 't7', name: "عبدالرحمن الزهراني", subject: "تربية إسلامية", icon: "fa-moon" }
       ];
       
-      const defaultClasses = ['4B', '4D', '5B', '5D', '6B', '6D', '7B', '7D', '8B', '8D', '9B', '9D', '10B', '10D', '11B', '11D', '12B', '12D'];
-      const CLASSES_STORAGE_KEY = 'classes_list';
+      var defaultClasses = ['4B', '4D', '5B', '5D', '6B', '6D', '7B', '7D', '8B', '8D', '9B', '9D', '10B', '10D', '11B', '11D', '12B', '12D'];
+      var CLASSES_STORAGE_KEY = 'classes_list';
       
-      let classesList = JSON.parse(localStorage.getItem(CLASSES_STORAGE_KEY)) || defaultClasses;
-      let currentLang = localStorage.getItem('dashboard_lang') || 'ar';
-      let currentTeacherId = null;
-      let currentClass = null;
-      let teachersList = JSON.parse(localStorage.getItem('teachers_list')) || defaultTeachers;
-      let storageMode = localStorage.getItem('storage_mode') || 'local';
-      let currentUser = null;
-      let originalStudentNames = [];
-      let calendarDate = new Date();
-      let selectedDate = new Date();
-      let data = {};
-      let allHistoryData = {};
-      let studentNames = [];
-      let selectedStudent = null;
+      // ===== المتغيرات العامة =====
+      var classesList = JSON.parse(localStorage.getItem(CLASSES_STORAGE_KEY)) || defaultClasses;
+      var currentLang = localStorage.getItem('dashboard_lang') || 'ar';
+      var currentTeacherId = null;
+      var currentClass = null;
+      var teachersList = JSON.parse(localStorage.getItem('teachers_list')) || defaultTeachers;
+      var storageMode = localStorage.getItem('storage_mode') || 'local';
+      var currentUser = null;
+      var originalStudentNames = [];
+      var calendarDate = new Date();
+      var selectedDate = new Date();
+      var data = {};
+      var allHistoryData = {};
+      var studentNames = [];
+      var selectedStudent = null;
 
-      // عناصر DOM
-      const teacherSelect = document.getElementById("teacherSelect");
-      const classSelect = document.getElementById("classSelect");
-      const teacherCardContainer = document.getElementById("teacherCardContainer");
-      const boardTitleEl = document.getElementById("boardTitleText");
-      const currentDateDisplayEl = document.getElementById("currentDateDisplay");
-      const classTitleInput = document.getElementById("classTitle");
-      const studentsContainer = document.getElementById("students");
-      const table = document.getElementById("report");
-      const tbody = table.querySelector("tbody");
-      const newTeacherNameInput = document.getElementById("newTeacherName");
-      const newTeacherSubjectSelect = document.getElementById("newTeacherSubject");
-      const addTeacherBtn = document.getElementById("addTeacherBtn");
-      const deleteTeacherBtn = document.getElementById("deleteTeacherBtn");
-      const deleteAllTeachersBtn = document.getElementById("deleteAllTeachersBtn");
-      const importTeachersInput = document.getElementById("importTeachersExcel");
-      const importTeachersLabel = document.getElementById("importTeachersLabel");
-      const newStudentNameInput = document.getElementById("newStudentName");
-      const addStudentBtn = document.getElementById("addStudentBtn");
-      const addClassBtn = document.getElementById("addClassBtn");
-      const deleteClassBtn = document.getElementById("deleteClassBtn");
-      const useLocalBtn = document.getElementById("useLocalBtn");
-      const useCloudBtn = document.getElementById("useCloudBtn");
-      const syncDataBtn = document.getElementById("syncDataBtn");
-      const loginBtn = document.getElementById("loginBtn");
-      const firebaseStatus = document.getElementById("firebaseStatus");
-      const loginForm = document.getElementById("loginForm");
-      const loginEmail = document.getElementById("loginEmail");
-      const loginPassword = document.getElementById("loginPassword");
-      const submitLogin = document.getElementById("submitLogin");
-      const registerBtn = document.getElementById("registerBtn");
-      const anonLogin = document.getElementById("anonLogin");
-      const cancelLogin = document.getElementById("cancelLogin");
-      const loginMessage = document.getElementById("loginMessage");
-      const calendarTitle = document.getElementById("calendarTitle");
-      const calendarGrid = document.getElementById("calendarGrid");
-      const prevMonthBtn = document.getElementById("prevMonth");
-      const nextMonthBtn = document.getElementById("nextMonth");
-      const calendarWrapper = document.getElementById("calendarWrapper");
-      const toggleCalendarBtn = document.getElementById("toggleCalendarBtn");
-      const resetAllCountersBtn = document.getElementById("resetAllCountersBtn");
-      const adminViewBtn = document.getElementById("adminViewBtn");
-      const fixEmailsBtn = document.getElementById("fixEmailsBtn");
+      // ===== عناصر DOM =====
+      var teacherSelect = document.getElementById("teacherSelect");
+      var classSelect = document.getElementById("classSelect");
+      var teacherCardContainer = document.getElementById("teacherCardContainer");
+      var boardTitleEl = document.getElementById("boardTitleText");
+      var currentDateDisplayEl = document.getElementById("currentDateDisplay");
+      var classTitleInput = document.getElementById("classTitle");
+      var studentsContainer = document.getElementById("students");
+      var table = document.getElementById("report");
+      var tbody = table.querySelector("tbody");
+      var newTeacherNameInput = document.getElementById("newTeacherName");
+      var newTeacherSubjectSelect = document.getElementById("newTeacherSubject");
+      var addTeacherBtn = document.getElementById("addTeacherBtn");
+      var deleteTeacherBtn = document.getElementById("deleteTeacherBtn");
+      var deleteAllTeachersBtn = document.getElementById("deleteAllTeachersBtn");
+      var importTeachersInput = document.getElementById("importTeachersExcel");
+      var importTeachersLabel = document.getElementById("importTeachersLabel");
+      var newStudentNameInput = document.getElementById("newStudentName");
+      var addStudentBtn = document.getElementById("addStudentBtn");
+      var addClassBtn = document.getElementById("addClassBtn");
+      var deleteClassBtn = document.getElementById("deleteClassBtn");
+      var useLocalBtn = document.getElementById("useLocalBtn");
+      var useCloudBtn = document.getElementById("useCloudBtn");
+      var syncDataBtn = document.getElementById("syncDataBtn");
+      var loginBtn = document.getElementById("loginBtn");
+      var firebaseStatus = document.getElementById("firebaseStatus");
+      var loginForm = document.getElementById("loginForm");
+      var loginEmail = document.getElementById("loginEmail");
+      var loginPassword = document.getElementById("loginPassword");
+      var submitLogin = document.getElementById("submitLogin");
+      var registerBtn = document.getElementById("registerBtn");
+      var anonLogin = document.getElementById("anonLogin");
+      var cancelLogin = document.getElementById("cancelLogin");
+      var loginMessage = document.getElementById("loginMessage");
+      var calendarTitle = document.getElementById("calendarTitle");
+      var calendarGrid = document.getElementById("calendarGrid");
+      var prevMonthBtn = document.getElementById("prevMonth");
+      var nextMonthBtn = document.getElementById("nextMonth");
+      var calendarWrapper = document.getElementById("calendarWrapper");
+      var toggleCalendarBtn = document.getElementById("toggleCalendarBtn");
+      var resetAllCountersBtn = document.getElementById("resetAllCountersBtn");
+      var adminViewBtn = document.getElementById("adminViewBtn");
+      var fixEmailsBtn = document.getElementById("fixEmailsBtn");
+      var exportAllDataBtn = document.getElementById("exportAllDataBtn");
+      var importExcel = document.getElementById("importExcel");
+      var importExcelLabel = document.getElementById("importExcelLabel");
+      var exportExcel = document.getElementById("exportExcel");
 
-      const editModal = document.getElementById('editModal');
-      const editStudentNameDisplay = document.getElementById('editStudentNameDisplay');
-      const editState = document.getElementById('editState');
-      const editBook = document.getElementById('editBook');
-      const editNotebook = document.getElementById('editNotebook');
-      const editHomework = document.getElementById('editHomework');
-      const editNote = document.getElementById('editNote');
-      const editParticipationCounter = document.getElementById('editParticipationCounter');
-      const editAbsenceCounter = document.getElementById('editAbsenceCounter');
-      const editLatenessCounter = document.getElementById('editLatenessCounter');
-      const editBadBehaviorCounter = document.getElementById('editBadBehaviorCounter');
-      const editTalkCounter = document.getElementById('editTalkCounter');
-      const editTalkWithoutPermissionCounter = document.getElementById('editTalkWithoutPermissionCounter');
-      const editBookNotActiveCounter = document.getElementById('editBookNotActiveCounter');
-      const editNotebookNotActiveCounter = document.getElementById('editNotebookNotActiveCounter');
-      const editHomeworkNotActiveCounter = document.getElementById('editHomeworkNotActiveCounter');
-      const editModalSave = document.getElementById('editModalSave');
-      const editModalCancel = document.getElementById('editModalCancel');
+      var editModal = document.getElementById('editModal');
+      var editStudentNameDisplay = document.getElementById('editStudentNameDisplay');
+      var editState = document.getElementById('editState');
+      var editBook = document.getElementById('editBook');
+      var editNotebook = document.getElementById('editNotebook');
+      var editHomework = document.getElementById('editHomework');
+      var editNote = document.getElementById('editNote');
+      var editParticipationCounter = document.getElementById('editParticipationCounter');
+      var editAbsenceCounter = document.getElementById('editAbsenceCounter');
+      var editLatenessCounter = document.getElementById('editLatenessCounter');
+      var editBadBehaviorCounter = document.getElementById('editBadBehaviorCounter');
+      var editTalkCounter = document.getElementById('editTalkCounter');
+      var editTalkWithoutPermissionCounter = document.getElementById('editTalkWithoutPermissionCounter');
+      var editBookNotActiveCounter = document.getElementById('editBookNotActiveCounter');
+      var editNotebookNotActiveCounter = document.getElementById('editNotebookNotActiveCounter');
+      var editHomeworkNotActiveCounter = document.getElementById('editHomeworkNotActiveCounter');
+      var editModalSave = document.getElementById('editModalSave');
+      var editModalCancel = document.getElementById('editModalCancel');
 
-      const formattedSelectedDate = function() {
-        const y = selectedDate.getFullYear();
-        const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
-        const d = String(selectedDate.getDate()).padStart(2, '0');
+      // ===== دوال مساعدة =====
+      function formattedSelectedDate() {
+        var y = selectedDate.getFullYear();
+        var m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+        var d = String(selectedDate.getDate()).padStart(2, '0');
         return y + '-' + m + '-' + d;
-      };
+      }
       
-      const STORAGE_KEY_DATA = function() {
+      function STORAGE_KEY_DATA() {
         return 'tracking_data_history_' + currentTeacherId + '_' + currentClass;
-      };
+      }
       
-      const STORAGE_KEY_ORIGINAL_NAMES = function() {
+      function STORAGE_KEY_ORIGINAL_NAMES() {
         return 'original_names_' + currentTeacherId + '_' + currentClass;
-      };
+      }
       
-      const STORAGE_KEY_TITLE = function() {
-        return 'board_title_' + currentTeacherId + '_' + currentClass;
-      };
-      
-      const FIREBASE_PATH = function() {
+      function FIREBASE_PATH() {
         if (!currentUser) return null;
         return 'users/' + currentUser.uid + '/teachers/' + currentTeacherId + '/classes/' + currentClass;
-      };
+      }
 
       function showMessage(message, type) {
         type = type || 'info';
@@ -626,6 +632,7 @@
         }, 4000);
       }
 
+      // ===== دوال الأقسام =====
       function saveClassesList() {
         localStorage.setItem(CLASSES_STORAGE_KEY, JSON.stringify(classesList));
       }
@@ -700,28 +707,8 @@
         }
       }
 
-      const classOptions = {
-        '4B': { ar: 'رابع B', en: '4th B' },
-        '4D': { ar: 'رابع D', en: '4th D' },
-        '5B': { ar: 'خامس B', en: '5th B' },
-        '5D': { ar: 'خامس D', en: '5th D' },
-        '6B': { ar: 'سادس B', en: '6th B' },
-        '6D': { ar: 'سادس D', en: '6th D' },
-        '7B': { ar: 'سابع B', en: '7th B' },
-        '7D': { ar: 'سابع D', en: '7th D' },
-        '8B': { ar: 'ثامن B', en: '8th B' },
-        '8D': { ar: 'ثامن D', en: '8th D' },
-        '9B': { ar: 'تاسع B', en: '9th B' },
-        '9D': { ar: 'تاسع D', en: '9th D' },
-        '10B': { ar: 'عاشر B', en: '10th B' },
-        '10D': { ar: 'عاشر D', en: '10th D' },
-        '11B': { ar: 'حادي عشر B', en: '11th B' },
-        '11D': { ar: 'حادي عشر D', en: '11th D' },
-        '12B': { ar: 'ثاني عشر B', en: '12th B' },
-        '12D': { ar: 'ثاني عشر D', en: '12th D' }
-      };
-
-      const translations = {
+      // ===== الترجمة =====
+      var translations = {
         ar: {
           boardTitle: "📋 لوحة متابعة المعلم",
           deleteTeacher: "حذف المعلم 🗑️",
@@ -862,6 +849,7 @@
         }
       };
 
+      // ===== دوال الترجمة =====
       function getSubjectIcon(subject) {
         var map = {
           'اجتماعيات': 'fa-globe',
@@ -1004,6 +992,7 @@
         allHistoryData[dateKey] = data;
       }
 
+      // ===== دوال التقويم =====
       function renderCalendar() {
         calendarGrid.innerHTML = "";
         var t = translations[currentLang].calendar;
@@ -1063,6 +1052,7 @@
         }
       }
 
+      // ===== دوال Firebase =====
       function updateFirebaseUI() {
         var t = translations[currentLang];
         if (currentUser) {
@@ -1116,7 +1106,7 @@
             lastUpdated: new Date().toISOString()
           };
           await firebaseDb.ref(path).set(saveData);
-          console.log("✅ Full History saved to Firebase under UID:", currentUser.uid);
+          console.log("✅ Saved to Firebase");
           return true;
         } catch (error) {
           console.error("❌ Error saving to Firebase:", error);
@@ -1146,7 +1136,7 @@
               boardTitleEl.textContent = firebaseData.boardTitle;
               classTitleInput.value = firebaseData.boardTitle.replace(translations[currentLang].boardTitle + " - ", "");
             }
-            console.log("✅ Data loaded from Firebase under UID:", currentUser.uid);
+            console.log("✅ Loaded from Firebase");
             loadDataFromLocalStorage();
             return true;
           }
@@ -1169,7 +1159,6 @@
         loginMessage.textContent = '';
       }
 
-      // ===== تسجيل الدخول =====
       async function loginWithEmail() {
         var email = loginEmail.value.trim();
         var password = loginPassword.value.trim();
@@ -1217,7 +1206,6 @@
         }
       }
 
-      // ===== إنشاء حساب جديد =====
       async function registerWithEmail() {
         var email = loginEmail.value.trim();
         var password = loginPassword.value.trim();
@@ -1310,6 +1298,7 @@
         });
       }
 
+      // ===== دوال المعلمين والطلاب =====
       function initTeacherSelect() {
         teacherSelect.innerHTML = '<option value="" disabled selected>-- اختر المعلم --</option>';
         teachersList.forEach(function(teacher) {
@@ -1340,7 +1329,7 @@
         if (storageMode === 'cloud' && currentUser && isFirebaseInitialized) {
           loaded = await loadFromFirebase();
           if (loaded) {
-            console.log("✅ تم تحميل البيانات من Firebase بنجاح");
+            console.log("✅ تم تحميل البيانات من Firebase");
           }
         }
         if (!loaded) loadDataFromLocalStorage();
@@ -1384,7 +1373,6 @@
         allHistoryData[dateKey] = data;
         localStorage.setItem(STORAGE_KEY_ORIGINAL_NAMES(), JSON.stringify(originalStudentNames));
         localStorage.setItem(STORAGE_KEY_DATA(), JSON.stringify(allHistoryData));
-        localStorage.setItem(STORAGE_KEY_TITLE(), boardTitleEl.textContent);
         if (storageMode === 'cloud' && currentUser) await saveToFirebase();
       }
 
@@ -1447,9 +1435,9 @@
         });
       }
 
-      // ===== زر المشرف =====
+      // ===== زر عرض الكل (مشرف) =====
       if (adminViewBtn) {
-        adminViewBtn.addEventListener("click", async function() {
+        adminViewBtn.addEventListener('click', async function() {
           if (!currentUser) {
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
@@ -1458,116 +1446,530 @@
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
+          
           showMessage('⏳ جاري تحميل جميع البيانات...', 'info');
+          
           try {
             var snapshot = await firebaseDb.ref('users').once('value');
             var allData = snapshot.val();
-            if (allData) {
-              console.log('📊 جميع البيانات:', allData);
-              showMessage('✅ تم تحميل جميع البيانات', 'success');
-              displayAllUsersData(allData);
-            } else {
+            
+            if (!allData) {
               showMessage('⚠️ لا توجد بيانات', 'info');
+              return;
             }
-          } catch (error) {
-            showMessage('❌ خطأ: ' + error.message, 'error');
-          }
-        });
-      }
-
-      function displayAllUsersData(allData) {
-        var html = '<h3>📊 تقرير شامل - جميع المعلمين والطلاب</h3><hr><div style="font-size:13px; color:#666; margin-bottom:10px;"><i class="fas fa-info-circle"></i> هذا التقرير يظهر جميع المعلمين وطلابهم مع بيانات المتابعة</div>';
-        var totalStudents = 0;
-        var totalTeachers = teachersList.length;
-        if (teachersList && teachersList.length > 0) {
-          html += '<div style="background:#e0e7ff; padding:10px; border-radius:5px; margin-bottom:15px;">';
-          html += '<strong>👨‍🏫 قائمة المعلمين (' + totalTeachers + '):</strong><br>';
-          teachersList.forEach(function(t) {
-            html += '  📧 ' + t.name + ' - ' + t.subject + '<br>';
-          });
-          html += '</div>';
-        }
-        Object.keys(allData).forEach(function(uid) {
-          var userData = allData[uid];
-          var userEmail = userData.profile?.email || 'غير معروف';
-          html += '<div style="border:2px solid #4f46e5; padding:12px; margin:10px 0; border-radius:8px; background:white;">';
-          html += '<div style="background:#e0e7ff; padding:8px; border-radius:5px; margin-bottom:8px;">';
-          html += '<strong>📧 البريد:</strong> ' + userEmail;
-          html += '  <span style="margin-right:15px;"><strong>🆔 UID:</strong> ' + uid.substring(0,12) + '...</span>';
-          html += '</div>';
-          if (userData.teachers) {
-            Object.keys(userData.teachers).forEach(function(teacherId) {
-              var teacher = userData.teachers[teacherId];
-              var teacherInfo = teachersList.find(function(t) { return t.id === teacherId; });
-              var teacherName = teacherInfo ? teacherInfo.name : teacherId;
-              html += '<div style="padding-right:15px; background:#f8fafc; margin:5px 0; padding:8px; border-radius:5px; border-right:3px solid #4f46e5;">';
-              html += '  👨‍🏫 <strong>المعلم:</strong> ' + teacherName + ' (' + (teacherInfo?.subject || '') + ')<br>';
-              if (teacher.classes) {
-                Object.keys(teacher.classes).forEach(function(cls) {
-                  var classData = teacher.classes[cls];
-                  html += '  📚 <strong>القسم:</strong> ' + cls + '<br>';
-                  if (classData.originalStudentNames && classData.originalStudentNames.length > 0) {
-                    html += '  👨‍🎓 <strong>الطلاب (' + classData.originalStudentNames.length + '):</strong><br>';
-                    html += '  <div style="padding-right:20px; margin:5px 0;">';
-                    classData.originalStudentNames.forEach(function(studentName) {
-                      var studentData = classData.datesData ? getStudentDataFromAllDays(classData.datesData, studentName) : null;
-                      totalStudents++;
-                      html += '<div style="display:inline-block; background:#f3f4f6; padding:3px 8px; margin:2px; border-radius:4px; font-size:12px;">';
-                      html += '  👤 ' + studentName;
-                      if (studentData) {
-                        var state = studentData.state || 0;
-                        var states = ['نقاط', 'مشاركة', 'تحدث', 'لا يشارك', 'سلوك', 'غياب'];
-                        html += ' (' + (states[state] || 'نشاط') + ')';
-                        html += ' | مشاركات: ' + (studentData.participationCounter || 0);
-                        html += ' | غياب: ' + (studentData.absenceCounter || 0);
-                        html += ' | تأخر: ' + (studentData.latenessCounter || 0);
+            
+            // عرض البيانات في نافذة جديدة
+            var html = '<h3>📊 تقرير شامل - جميع المستخدمين</h3><hr>';
+            html += '<div style="font-size:13px; color:#666; margin-bottom:10px;">';
+            html += '<i class="fas fa-info-circle"></i> عدد المستخدمين: ' + Object.keys(allData).length;
+            html += '</div>';
+            
+            Object.keys(allData).forEach(function(uid) {
+              var userData = allData[uid];
+              var userEmail = userData.profile?.email || '⚠️ لا يوجد بريد';
+              var userName = userData.profile?.name || 'غير معروف';
+              
+              html += '<div style="border:2px solid #4f46e5; padding:12px; margin:10px 0; border-radius:8px; background:white;">';
+              html += '<div style="background:#e0e7ff; padding:8px; border-radius:5px; margin-bottom:8px;">';
+              html += '<strong>📧 البريد:</strong> ' + userEmail;
+              html += '  <span style="margin-right:15px;"><strong>🆔 UID:</strong> ' + uid.substring(0,12) + '...</span>';
+              html += '  <span style="margin-right:15px;"><strong>👤 الاسم:</strong> ' + userName + '</span>';
+              html += '</div>';
+              
+              if (userData.teachers) {
+                Object.keys(userData.teachers).forEach(function(teacherId) {
+                  var teacher = userData.teachers[teacherId];
+                  var teacherInfo = teachersList.find(function(t) { return t.id === teacherId; });
+                  var teacherName = teacherInfo ? teacherInfo.name : teacherId;
+                  var teacherSubject = teacherInfo ? teacherInfo.subject : 'غير معروف';
+                  
+                  html += '<div style="padding-right:15px; background:#f8fafc; margin:5px 0; padding:8px; border-radius:5px; border-right:3px solid #4f46e5;">';
+                  html += '  👨‍🏫 <strong>المعلم:</strong> ' + teacherName + ' (' + teacherSubject + ')<br>';
+                  
+                  if (teacher.classes) {
+                    Object.keys(teacher.classes).forEach(function(cls) {
+                      var classData = teacher.classes[cls];
+                      var studentCount = classData.originalStudentNames ? classData.originalStudentNames.length : 0;
+                      var daysCount = classData.datesData ? Object.keys(classData.datesData).length : 0;
+                      
+                      html += '  📚 <strong>القسم:</strong> ' + cls;
+                      html += ' | 👨‍🎓 عدد الطلاب: ' + studentCount;
+                      html += ' | 📅 عدد الأيام: ' + daysCount;
+                      html += '<br>';
+                      
+                      if (classData.originalStudentNames && classData.originalStudentNames.length > 0) {
+                        html += '  <div style="padding-right:15px; margin-top:3px;">';
+                        html += '  👨‍🎓 الطلاب: ';
+                        var displayNames = classData.originalStudentNames.slice(0, 5);
+                        displayNames.forEach(function(name, idx) {
+                          html += name;
+                          if (idx < displayNames.length - 1) html += '، ';
+                        });
+                        if (classData.originalStudentNames.length > 5) {
+                          html += ' ... (+' + (classData.originalStudentNames.length - 5) + ')';
+                        }
+                        html += '</div>';
                       }
-                      html += '</div>';
                     });
-                    html += '  </div>';
                   }
-                  if (classData.datesData) {
-                    var days = Object.keys(classData.datesData);
-                    html += '  📅 <strong>أيام المسجلة:</strong> ' + days.length + ' يوم<br>';
-                  }
+                  html += '</div>';
                 });
+              } else {
+                html += '<div style="color:#999;">⚠️ لا توجد بيانات معلمين لهذا المستخدم</div>';
               }
               html += '</div>';
             });
-          } else {
-            html += '<div style="color:#999;">⚠️ لا توجد بيانات لهذا المستخدم</div>';
+            
+            var win = window.open('', '_blank', 'width=900,height=600');
+            win.document.write('<html dir="rtl"><head><title>تقرير جميع المستخدمين</title><style>body{font-family:Arial;padding:20px;background:#f5f5f5;direction:rtl;}button{padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:5px;cursor:pointer;margin-top:20px;font-size:16px;}button:hover{background:#4338ca;}</style></head><body>' + html + '<button onclick="window.close()">❌ إغلاق</button></body></html>');
+            win.document.close();
+            
+            showMessage('✅ تم تحميل جميع البيانات', 'success');
+            
+          } catch (error) {
+            console.error('❌ خطأ:', error);
+            showMessage('❌ حدث خطأ: ' + error.message, 'error');
           }
-          html += '</div>';
         });
-        html += '<div style="background:#f3f4f6; padding:10px; border-radius:5px; margin-top:15px; text-align:center;">';
-        html += '<strong>📊 إجمالي الإحصائيات:</strong><br>';
-        html += '👨‍🏫 ' + totalTeachers + ' معلم | ';
-        html += '👨‍🎓 ' + totalStudents + ' طالب';
-        html += '</div>';
-        var win = window.open('', '_blank', 'width=1000,height=700');
-        win.document.write('<html dir="rtl"><head><title>تقرير جميع المعلمين والطلاب</title><style>body { font-family: Arial; padding: 20px; background: #f5f5f5; direction: rtl; } button { padding:10px 20px; background:#4f46e5; color:white; border:none; border-radius:5px; cursor:pointer; margin-top:20px; font-size:16px; } button:hover { background:#4338ca; }</style></head><body>' + html + '<button onclick="window.close()">❌ إغلاق</button></body></html>');
-        win.document.close();
       }
 
-      function getStudentDataFromAllDays(datesData, studentName) {
-        if (!datesData) return null;
-        var days = Object.keys(datesData);
-        var combinedData = null;
-        days.forEach(function(day) {
-          var dayData = datesData[day];
-          if (dayData && dayData[studentName]) {
-            if (!combinedData) {
-              combinedData = Object.assign({}, dayData[studentName]);
-            } else {
-              combinedData.participationCounter = (combinedData.participationCounter || 0) + (dayData[studentName].participationCounter || 0);
-              combinedData.absenceCounter = (combinedData.absenceCounter || 0) + (dayData[studentName].absenceCounter || 0);
-              combinedData.latenessCounter = (combinedData.latenessCounter || 0) + (dayData[studentName].latenessCounter || 0);
-              combinedData.badBehaviorCounter = (combinedData.badBehaviorCounter || 0) + (dayData[studentName].badBehaviorCounter || 0);
-              combinedData.talkCounter = (combinedData.talkCounter || 0) + (dayData[studentName].talkCounter || 0);
+      // ===== زر تصدير جميع البيانات (Excel مع ألوان) =====
+      if (exportAllDataBtn) {
+        exportAllDataBtn.addEventListener('click', async function() {
+          if (!currentUser) {
+            showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
+            return;
+          }
+          if (currentUser.email !== 'alalmagik@gmail.com') {
+            showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
+            return;
+          }
+          
+          showMessage('⏳ جاري تصدير جميع البيانات...', 'info');
+          
+          try {
+            var snapshot = await firebaseDb.ref('users').once('value');
+            var allData = snapshot.val();
+            
+            if (!allData) {
+              showMessage('⚠️ لا توجد بيانات للتصدير', 'error');
+              return;
             }
+            
+            var workbook = new ExcelJS.Workbook();
+            workbook.creator = 'Admin Dashboard';
+            workbook.created = new Date();
+            
+            // ========== الورقة الأولى: المستخدمين ==========
+            var worksheet1 = workbook.addWorksheet('المستخدمين', {
+              pageSetup: { paperSize: 9, orientation: 'landscape' }
+            });
+
+            worksheet1.mergeCells('A1:F1');
+            var titleRow = worksheet1.getRow(1);
+            titleRow.getCell(1).value = '📊 تقرير جميع المستخدمين (' + new Date().toLocaleString('ar-SA') + ')';
+            titleRow.getCell(1).font = { bold: true, size: 14 };
+            titleRow.getCell(1).alignment = { horizontal: 'center' };
+
+            var headers1 = ['#', 'البريد الإلكتروني', 'الاسم', 'عدد المعلمين', 'عدد الأقسام', 'عدد الطلاب'];
+            var headerRow1 = worksheet1.addRow(headers1);
+            headerRow1.eachCell(function(cell) {
+              cell.font = { bold: true };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+              cell.font.color = { argb: 'FFFFFFFF' };
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            var rowIndex = 2;
+            Object.keys(allData).forEach(function(uid, index) {
+              var userData = allData[uid];
+              var userEmail = userData.profile?.email || '⚠️ لا يوجد بريد';
+              var userName = userData.profile?.name || 'غير معروف';
+              var teacherCount = 0;
+              var classCount = 0;
+              var studentCount = 0;
+              
+              if (userData.teachers) {
+                teacherCount = Object.keys(userData.teachers).length;
+                Object.keys(userData.teachers).forEach(function(teacherId) {
+                  var teacher = userData.teachers[teacherId];
+                  if (teacher.classes) {
+                    classCount += Object.keys(teacher.classes).length;
+                    Object.keys(teacher.classes).forEach(function(cls) {
+                      var classData = teacher.classes[cls];
+                      if (classData.originalStudentNames) {
+                        studentCount += classData.originalStudentNames.length;
+                      }
+                    });
+                  }
+                });
+              }
+              
+              var row = worksheet1.addRow([
+                index + 1,
+                userEmail,
+                userName,
+                teacherCount,
+                classCount,
+                studentCount
+              ]);
+              
+              row.eachCell(function(cell) {
+                cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              });
+              
+              if (userEmail === '⚠️ لا يوجد بريد') {
+                row.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF0000' } };
+                row.getCell(2).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+              }
+              
+              rowIndex++;
+            });
+
+            worksheet1.columns = [
+              { width: 6 },
+              { width: 35 },
+              { width: 20 },
+              { width: 15 },
+              { width: 15 },
+              { width: 15 }
+            ];
+
+            // ========== الورقة الثانية: تفاصيل المعلمين والأقسام ==========
+            var worksheet2 = workbook.addWorksheet('تفاصيل المعلمين', {
+              pageSetup: { paperSize: 9, orientation: 'landscape' }
+            });
+
+            worksheet2.mergeCells('A1:F1');
+            var titleRow2 = worksheet2.getRow(1);
+            titleRow2.getCell(1).value = '📊 تفاصيل المعلمين والأقسام';
+            titleRow2.getCell(1).font = { bold: true, size: 14 };
+            titleRow2.getCell(1).alignment = { horizontal: 'center' };
+
+            var headers2 = ['البريد الإلكتروني', 'المعلم', 'المادة', 'القسم', 'عدد الطلاب', 'عدد الأيام'];
+            var headerRow2 = worksheet2.addRow(headers2);
+            headerRow2.eachCell(function(cell) {
+              cell.font = { bold: true };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF059669' } };
+              cell.font.color = { argb: 'FFFFFFFF' };
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            Object.keys(allData).forEach(function(uid) {
+              var userData = allData[uid];
+              var userEmail = userData.profile?.email || '⚠️ لا يوجد بريد';
+              
+              if (userData.teachers) {
+                Object.keys(userData.teachers).forEach(function(teacherId) {
+                  var teacher = userData.teachers[teacherId];
+                  var teacherInfo = teachersList.find(function(t) { return t.id === teacherId; });
+                  var teacherName = teacherInfo ? teacherInfo.name : teacherId;
+                  var teacherSubject = teacherInfo ? teacherInfo.subject : 'غير معروف';
+                  
+                  if (teacher.classes) {
+                    Object.keys(teacher.classes).forEach(function(cls) {
+                      var classData = teacher.classes[cls];
+                      var studentCount = classData.originalStudentNames ? classData.originalStudentNames.length : 0;
+                      var daysCount = classData.datesData ? Object.keys(classData.datesData).length : 0;
+                      
+                      var row = worksheet2.addRow([
+                        userEmail,
+                        teacherName,
+                        teacherSubject,
+                        cls,
+                        studentCount,
+                        daysCount
+                      ]);
+                      
+                      row.eachCell(function(cell) {
+                        cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                      });
+                    });
+                  }
+                });
+              }
+            });
+
+            worksheet2.columns = [
+              { width: 35 },
+              { width: 20 },
+              { width: 15 },
+              { width: 12 },
+              { width: 15 },
+              { width: 12 }
+            ];
+
+            // ========== الورقة الثالثة: الطلاب (تفاصيل مع ألوان) ==========
+            var worksheet3 = workbook.addWorksheet('الطلاب', {
+              pageSetup: { paperSize: 9, orientation: 'landscape' }
+            });
+
+            worksheet3.mergeCells('A1:G1');
+            var titleRow3 = worksheet3.getRow(1);
+            titleRow3.getCell(1).value = '📊 تفاصيل الطلاب';
+            titleRow3.getCell(1).font = { bold: true, size: 14 };
+            titleRow3.getCell(1).alignment = { horizontal: 'center' };
+
+            var headers3 = ['البريد الإلكتروني', 'المعلم', 'القسم', 'الطالب', 'الحالة', 'المشاركات', 'الغياب'];
+            var headerRow3 = worksheet3.addRow(headers3);
+            headerRow3.eachCell(function(cell) {
+              cell.font = { bold: true };
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7C3AED' } };
+              cell.font.color = { argb: 'FFFFFFFF' };
+              cell.alignment = { horizontal: 'center', vertical: 'middle' };
+              cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+            });
+
+            var stateColors = {
+              0: 'FFE8E8E8',
+              1: 'FF90EE90',
+              2: 'FFFFD700',
+              3: 'FFFFA500',
+              4: 'FFFF6347',
+              5: 'FFFF4444'
+            };
+            
+            var stateNames = ['نقاط', 'مشاركة', 'تحدث', 'لا يشارك', 'سلوك', 'غياب'];
+
+            Object.keys(allData).forEach(function(uid) {
+              var userData = allData[uid];
+              var userEmail = userData.profile?.email || '⚠️ لا يوجد بريد';
+              
+              if (userData.teachers) {
+                Object.keys(userData.teachers).forEach(function(teacherId) {
+                  var teacher = userData.teachers[teacherId];
+                  var teacherInfo = teachersList.find(function(t) { return t.id === teacherId; });
+                  var teacherName = teacherInfo ? teacherInfo.name : teacherId;
+                  
+                  if (teacher.classes) {
+                    Object.keys(teacher.classes).forEach(function(cls) {
+                      var classData = teacher.classes[cls];
+                      
+                      if (classData.originalStudentNames) {
+                        classData.originalStudentNames.forEach(function(studentName) {
+                          var latestData = null;
+                          if (classData.datesData) {
+                            var dates = Object.keys(classData.datesData).sort();
+                            if (dates.length > 0) {
+                              var lastDate = dates[dates.length - 1];
+                              if (classData.datesData[lastDate] && classData.datesData[lastDate][studentName]) {
+                                latestData = classData.datesData[lastDate][studentName];
+                              }
+                            }
+                          }
+                          
+                          var state = latestData ? latestData.state || 0 : 0;
+                          var participation = latestData ? latestData.participationCounter || 0 : 0;
+                          var absence = latestData ? latestData.absenceCounter || 0 : 0;
+                          
+                          var row = worksheet3.addRow([
+                            userEmail,
+                            teacherName,
+                            cls,
+                            studentName,
+                            stateNames[state] || 'نشاط',
+                            participation,
+                            absence
+                          ]);
+                          
+                          // تلوين الحالة
+                          var color = stateColors[state] || 'FFE8E8E8';
+                          row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: color } };
+                          row.getCell(5).font = { bold: true };
+                          
+                          // تلوين المشاركات العالية
+                          if (participation >= 10) {
+                            row.getCell(6).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF90EE90' } };
+                            row.getCell(6).font = { bold: true };
+                          }
+                          
+                          // تلوين الغياب العالي
+                          if (absence >= 5) {
+                            row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFF4444' } };
+                            row.getCell(7).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+                          }
+                          
+                          row.eachCell(function(cell) {
+                            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+                            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+                          });
+                        });
+                      }
+                    });
+                  }
+                });
+              }
+            });
+
+            worksheet3.columns = [
+              { width: 35 },
+              { width: 20 },
+              { width: 12 },
+              { width: 18 },
+              { width: 15 },
+              { width: 12 },
+              { width: 12 }
+            ];
+
+            // تصدير الملف
+            var buffer = await workbook.xlsx.writeBuffer();
+            var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'تقرير_جميع_المستخدمين_' + new Date().toISOString().slice(0,10) + '.xlsx';
+            link.click();
+            URL.revokeObjectURL(link.href);
+
+            showMessage('✅ تم تصدير جميع البيانات بنجاح مع 3 أوراق عمل', 'success');
+            
+          } catch (error) {
+            console.error('❌ خطأ:', error);
+            showMessage('❌ حدث خطأ: ' + error.message, 'error');
           }
         });
-        return combinedData;
+      }
+
+      // ===== زر تحميل أسماء من Excel =====
+      if (importExcel) {
+        importExcel.addEventListener('change', async function(e) {
+          if (!currentTeacherId || !currentClass) {
+            showMessage(translations[currentLang].errorSelectTeacher + ' - ' + translations[currentLang].errorSelectClass, 'error');
+            return;
+          }
+          var file = e.target.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = async function(evt) {
+            try {
+              var wb = XLSX.read(evt.target.result, { type: "binary" });
+              var sheet = wb.Sheets[wb.SheetNames[0]];
+              var rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+              var importedNames = rows.map(function(r) { return r[0]; }).filter(Boolean).map(function(name) { return name.toString().trim(); });
+              
+              if (importedNames.length === 0) {
+                showMessage('⚠️ لم يتم العثور على أسماء في الملف', 'error');
+                return;
+              }
+              
+              originalStudentNames = importedNames;
+              updateDisplayNames();
+              ensureAllStudentsInData();
+              initStudentsUI();
+              updateTable();
+              await saveAll();
+              showMessage(currentLang === 'ar' ? ('✅ تم تحميل ' + originalStudentNames.length + ' طالب بنجاح') : ('✅ Successfully loaded ' + originalStudentNames.length + ' students'), 'success');
+              importExcel.value = '';
+            } catch (error) {
+              showMessage(currentLang === 'ar' ? "❌ حدث خطأ في تحميل الملف" : "❌ Error loading file", 'error');
+              console.error(error);
+            }
+          };
+          reader.readAsBinaryString(file);
+        });
+      }
+
+      // ===== زر تصدير Excel (للجدول الحالي) =====
+      if (exportExcel) {
+        exportExcel.addEventListener('click', function() {
+          if (!currentTeacherId || !currentClass) {
+            showMessage(currentLang === 'ar' ? "الرجاء اختيار المعلم والقسم أولاً" : "Please select Teacher and Class first.", 'error');
+            return;
+          }
+          var t = translations[currentLang];
+          var rows = [];
+          var currentSelDate = selectedDate;
+          var days = currentLang === 'ar' ? ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+          var dayName = days[currentSelDate.getDay()];
+          var dateString = currentSelDate.toLocaleDateString(currentLang === 'ar' ? "ar-SA" : "en-US");
+          var timeString = new Date().toLocaleTimeString();
+          var teacher = teachersList.find(function(tch) { return tch.id === currentTeacherId; });
+          var teacherName = teacher ? teacher.name : "Teacher";
+          var teacherSubject = teacher ? teacher.subject : "Subject";
+          var className = classOptions[currentClass] ? classOptions[currentClass][currentLang] : currentClass;
+          var boardTitle = boardTitleEl.textContent.replace(t.boardTitle + ' - ', '');
+          var dateFileKey = formattedSelectedDate();
+          
+          rows.push(['🗓️ ' + dayName + ' - ' + dateString + ' - ' + timeString]);
+          rows.push(['📋 ' + boardTitle]);
+          rows.push(['👨‍🏫 المعلم: ' + teacherName + ' - المادة: ' + teacherSubject]);
+          rows.push([]);
+          
+          var headers = [
+            t.name, t.rating, t.goodParticipation, t.talkingInClass, t.notParticipating,
+            t.behavior, t.lateness, t.attendance, t.book, t.notebook, t.homework,
+            t.notes, t.status, t.participationCounter, t.level, t.progressPercentage,
+            t.absenceCounter, t.talkingCounter, t.talkWithoutPermission, t.bookNotActive,
+            t.notebookNotActive, t.homeworkNotActive, t.badBehaviorCounter, t.latenessCounter
+          ];
+          rows.push(headers);
+          
+          studentNames.forEach(function(displayName, displayIndex) {
+            var originalName = originalStudentNames[displayIndex] || displayName;
+            var studentData = data[originalName] || {};
+            var stIdx = studentData.state || 0;
+            var st = t.states[stIdx];
+            var trophy = stIdx === 1 ? "🏆" : "";
+            var gParticipation = studentData.participationCounter || 0;
+            var baseLevel = t.levels[0];
+            if (gParticipation >= 70) baseLevel = t.levels[5];
+            else if (gParticipation >= 50) baseLevel = t.levels[4];
+            else if (gParticipation >= 30) baseLevel = t.levels[3];
+            else if (gParticipation >= 25) baseLevel = t.levels[2];
+            else if (gParticipation >= 10) baseLevel = t.levels[1];
+            var levelPercentages = {};
+            levelPercentages[t.levels[0]] = 10;
+            levelPercentages[t.levels[1]] = 35;
+            levelPercentages[t.levels[2]] = 60;
+            levelPercentages[t.levels[3]] = 75;
+            levelPercentages[t.levels[4]] = 85;
+            levelPercentages[t.levels[5]] = 95;
+            var pPercentage = levelPercentages[baseLevel] || 10;
+            
+            var rowData = [
+              displayName + ' ' + trophy,
+              st.stars,
+              stIdx === 1 ? "✔" : "",
+              stIdx === 2 ? "✔" : "",
+              stIdx === 3 ? "✔" : "",
+              stIdx === 4 ? "✔" : "",
+              (studentData.latenessCounter || 0) > 0 ? "⏰" : "",
+              stIdx === 5 ? t.attendanceText[1] : t.attendanceText[0],
+              studentData.book ? "✅" : "❌",
+              studentData.notebook ? "✅" : "❌",
+              studentData.homework ? "✅" : "❌",
+              studentData.note || "",
+              st.label,
+              studentData.participationCounter || 0,
+              baseLevel,
+              pPercentage + '%',
+              studentData.absenceCounter || 0,
+              studentData.talkCounter || 0,
+              studentData.talkWithoutPermissionCounter || 0,
+              studentData.bookNotActiveCounter || 0,
+              studentData.notebookNotActiveCounter || 0,
+              studentData.homeworkNotActiveCounter || 0,
+              studentData.badBehaviorCounter || 0,
+              studentData.latenessCounter || 0
+            ];
+            rows.push(rowData);
+          });
+          
+          try {
+            var ws = XLSX.utils.aoa_to_sheet(rows);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, currentLang === 'ar' ? "كشف المتابعة" : "Tracking Report");
+            var fileName = 'كشف_متابعة_' + teacherName + '_' + currentClass + '_' + dateFileKey + '.xlsx';
+            XLSX.writeFile(wb, fileName);
+            showMessage('✅ تم تصدير الملف بنجاح', 'success');
+          } catch (error) {
+            showMessage(currentLang === 'ar' ? "❌ حدث خطأ في التصدير" : "❌ Error exporting file", 'error');
+            console.error(error);
+          }
+        });
       }
 
       // ===== دوال الطلاب =====
@@ -1932,6 +2334,7 @@
           nameSpan.style.fontWeight = "bold";
           var quickActions = document.createElement("div");
           quickActions.className = "table-quick-actions";
+          
           var btnTableParticipate = document.createElement("button");
           btnTableParticipate.textContent = "👋";
           btnTableParticipate.title = t.quickActions.participate;
@@ -1942,6 +2345,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableParticipate);
+          
           var btnTableTalk = document.createElement("button");
           btnTableTalk.textContent = "🗣️";
           btnTableTalk.title = t.quickActions.talk;
@@ -1952,6 +2356,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableTalk);
+          
           var btnTableAbsent = document.createElement("button");
           btnTableAbsent.textContent = "❌";
           btnTableAbsent.title = t.quickActions.absent;
@@ -1962,6 +2367,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableAbsent);
+          
           var btnTableLateness = document.createElement("button");
           btnTableLateness.textContent = "⏰";
           btnTableLateness.title = t.quickActions.lateness;
@@ -1974,6 +2380,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableLateness);
+          
           var btnTableReset = document.createElement("button");
           btnTableReset.textContent = "🔄";
           btnTableReset.title = t.quickActions.resetCounters;
@@ -1984,6 +2391,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableReset);
+          
           var btnTableDelete = document.createElement("button");
           btnTableDelete.textContent = "🗑️";
           btnTableDelete.title = t.deleteStudent;
@@ -1995,6 +2403,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableDelete);
+          
           var btnTableBook = document.createElement("button");
           btnTableBook.className = "table-counter-btn";
           btnTableBook.textContent = "📗 +";
@@ -2006,6 +2415,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableBook);
+          
           var btnTableNotebook = document.createElement("button");
           btnTableNotebook.className = "table-counter-btn";
           btnTableNotebook.textContent = "📒 +";
@@ -2017,6 +2427,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableNotebook);
+          
           var btnTableHomework = document.createElement("button");
           btnTableHomework.className = "table-counter-btn";
           btnTableHomework.textContent = "📘 +";
@@ -2028,6 +2439,7 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableHomework);
+          
           var btnTableEdit = document.createElement("button");
           btnTableEdit.textContent = "✏️";
           btnTableEdit.title = "تعديل البيانات";
@@ -2040,9 +2452,11 @@
             };
           })(displayName);
           quickActions.appendChild(btnTableEdit);
+          
           nameCell.appendChild(nameSpan);
           nameCell.appendChild(quickActions);
           row.appendChild(nameCell);
+          
           var ratingCell = document.createElement("td");
           ratingCell.innerHTML = '⭐'.repeat(st.stars) + ' <span class="stars-count">' + st.stars + '</span>';
           row.appendChild(ratingCell);
@@ -2050,26 +2464,32 @@
           row.appendChild(createStatusCell(stIdx === 2, "✔"));
           row.appendChild(createStatusCell(stIdx === 3, "✔"));
           row.appendChild(createStatusCell(stIdx === 4, "✔"));
+          
           var tdLateness = document.createElement("td");
           tdLateness.textContent = (studentData.latenessCounter || 0) > 0 ? "✔" : "";
           tdLateness.style.fontWeight = "bold";
           tdLateness.style.fontSize = "14px";
           row.appendChild(tdLateness);
+          
           var attendanceCell = document.createElement("td");
           attendanceCell.textContent = stIdx === 5 ? t.attendanceText[1] : t.attendanceText[0];
           attendanceCell.style.fontWeight = "bold";
           attendanceCell.style.color = stIdx === 5 ? "#ef4444" : "#22c55e";
           row.appendChild(attendanceCell);
+          
           row.appendChild(createCheckCell(displayName, "book", t.book));
           row.appendChild(createCheckCell(displayName, "notebook", t.notebook));
           row.appendChild(createCheckCell(displayName, "homework", t.homework));
           row.appendChild(createNotesCell(displayName));
+          
           var tdStatus = document.createElement("td");
           tdStatus.textContent = st.label;
           tdStatus.style.fontWeight = "bold";
           tdStatus.style.color = st.color;
           row.appendChild(tdStatus);
+          
           row.appendChild(createDynamicTextCell('participation', studentData.participationCounter || 0));
+          
           var gParticipation = studentData.participationCounter || 0;
           var baseLevel = t.levels[0];
           if (gParticipation >= 70) baseLevel = t.levels[5];
@@ -2077,6 +2497,7 @@
           else if (gParticipation >= 30) baseLevel = t.levels[3];
           else if (gParticipation >= 25) baseLevel = t.levels[2];
           else if (gParticipation >= 10) baseLevel = t.levels[1];
+          
           var levelPercentages = {};
           levelPercentages[t.levels[0]] = 10;
           levelPercentages[t.levels[1]] = 35;
@@ -2085,27 +2506,34 @@
           levelPercentages[t.levels[4]] = 85;
           levelPercentages[t.levels[5]] = 95;
           var pPercentage = levelPercentages[baseLevel] || 10;
+          
           var tdLevel = document.createElement("td");
           tdLevel.textContent = baseLevel;
           tdLevel.className = 'level-' + baseLevel;
           row.appendChild(tdLevel);
+          
           var tdProgress = document.createElement("td");
           tdProgress.innerHTML = '<span class="progress-percentage">' + pPercentage + '%</span>';
           row.appendChild(tdProgress);
+          
           row.appendChild(createDynamicTextCell('absence', studentData.absenceCounter || 0));
           row.appendChild(createDynamicTextCell('talking', studentData.talkCounter || 0));
+          
           var tdTalkWithoutPermission = document.createElement("td");
           tdTalkWithoutPermission.textContent = studentData.talkWithoutPermissionCounter || 0;
           row.appendChild(tdTalkWithoutPermission);
+          
           row.appendChild(createDynamicTextCell('book', studentData.bookNotActiveCounter || 0));
           row.appendChild(createDynamicTextCell('notebook', studentData.notebookNotActiveCounter || 0));
           row.appendChild(createDynamicTextCell('homework', studentData.homeworkNotActiveCounter || 0));
           row.appendChild(createDynamicTextCell('behavior', studentData.badBehaviorCounter || 0));
           row.appendChild(createDynamicTextCell('lateness', studentData.latenessCounter || 0));
+          
           tbody.appendChild(row);
         });
       }
 
+      // ===== تطبيق اللغة =====
       function applyLanguage(lang) {
         currentLang = lang;
         document.body.dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -2114,9 +2542,9 @@
         var t = translations[lang];
         document.getElementById("switchToAr").classList.toggle('active', lang === 'ar');
         document.getElementById("switchToEn").classList.toggle('active', lang === 'en');
-        classTitleInput.placeholder = t.classTitle || "أدخل اسم القسم...";
-        document.getElementById("importExcelLabel").textContent = t.importExcel || "📥 تحميل أسماء من Excel";
-        document.getElementById("exportExcel").textContent = t.exportExcel || "📤 تصدير Excel";
+        classTitleInput.placeholder = "أدخل اسم القسم...";
+        importExcelLabel.textContent = t.importExcel || "📥 تحميل أسماء من Excel";
+        exportExcel.textContent = t.exportExcel || "📤 تصدير Excel";
         newTeacherNameInput.placeholder = t.newTeacherPlaceholder || "اسم المعلم...";
         newStudentNameInput.placeholder = t.newStudentPlaceholder || "أضف طالباً يدوياً...";
         deleteTeacherBtn.textContent = t.deleteTeacher || "حذف المعلم 🗑️";
@@ -2135,7 +2563,7 @@
           if (key && t[key]) header.textContent = t[key];
         });
         var copyrightFooter = document.getElementById('copyrightFooter');
-        if (copyrightFooter) copyrightFooter.textContent = t.copyrightText || "📊 نظام متابعة المعلمين والطلاب - حقوق الملكية © 2026 محمد رضا عوف";
+        if (copyrightFooter) copyrightFooter.textContent = "📊 نظام متابعة المعلمين والطلاب - حقوق الملكية © 2026 محمد رضا عوف";
         var teacherCard = document.querySelector('.teacher-card');
         if (teacherCard) {
           var teacherInfo = teacherCard.querySelector('.teacher-info p');
@@ -2180,6 +2608,8 @@
         selectedStudent = t.dataset.name;
         t.classList.add('selected');
       });
+      
+      // ===== زر تقرير العام =====
       document.getElementById('showYearReportBtn').addEventListener('click', function() {
         if (!currentTeacherId || !currentClass) {
           showMessage('الرجاء اختيار المعلم والقسم أولاً', 'error');
@@ -2292,7 +2722,6 @@
             if (key.includes('tracking_data_history_' + currentTeacherId + '_')) keysToRemove.push(key);
             if (key.includes('tracking_names_' + currentTeacherId + '_')) keysToRemove.push(key);
             if (key.includes('original_names_' + currentTeacherId + '_')) keysToRemove.push(key);
-            if (key.includes('board_title_' + currentTeacherId + '_')) keysToRemove.push(key);
           });
           keysToRemove.forEach(function(key) { localStorage.removeItem(key); });
           if (storageMode === 'cloud' && currentUser && isFirebaseInitialized) {
@@ -2385,132 +2814,6 @@
         reader.readAsBinaryString(file);
       });
 
-      document.getElementById("importExcel").addEventListener("change", async function(e) {
-        if (!currentTeacherId || !currentClass) {
-          alert(translations[currentLang].errorSelectTeacher + "\n" + translations[currentLang].errorSelectClass);
-          return;
-        }
-        var file = e.target.files[0];
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = async function(evt) {
-          try {
-            var wb = XLSX.read(evt.target.result, { type: "binary" });
-            var sheet = wb.Sheets[wb.SheetNames[0]];
-            var rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            var importedNames = rows.map(function(r) { return r[0]; }).filter(Boolean).map(function(name) { return name.toString().trim(); });
-            originalStudentNames = importedNames;
-            updateDisplayNames();
-            ensureAllStudentsInData();
-            initStudentsUI();
-            updateTable();
-            await saveAll();
-            alert(currentLang === 'ar' ? ('تم تحميل ' + originalStudentNames.length + ' طالب بنجاح') : ('Successfully loaded ' + originalStudentNames.length + ' students'));
-          } catch (error) {
-            alert(currentLang === 'ar' ? "حدث خطأ في تحميل الملف" : "Error loading file");
-            console.error(error);
-          }
-        };
-        reader.readAsBinaryString(file);
-      });
-
-      document.getElementById("exportExcel").addEventListener("click", function() {
-        if (!currentTeacherId || !currentClass) {
-          alert(currentLang === 'ar' ? "الرجاء اختيار المعلم والقسم أولاً" : "Please select Teacher and Class first.");
-          return;
-        }
-        var t = translations[currentLang];
-        var rows = [];
-        var currentSelDate = selectedDate;
-        var days = currentLang === 'ar' ? ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"] : ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-        var dayName = days[currentSelDate.getDay()];
-        var dateString = currentSelDate.toLocaleDateString(currentLang === 'ar' ? "ar-SA" : "en-US");
-        var timeString = new Date().toLocaleTimeString();
-        var teacher = teachersList.find(function(tch) { return tch.id === currentTeacherId; });
-        var teacherName = teacher ? teacher.name : "Teacher";
-        var teacherSubject = teacher ? teacher.subject : "Subject";
-        var className = classOptions[currentClass] ? classOptions[currentClass][currentLang] : currentClass;
-        var boardTitle = boardTitleEl.textContent.replace(t.boardTitle + ' - ', '');
-        var dateFileKey = formattedSelectedDate();
-        rows.push([t.excelTitle(dateString, dayName, timeString, boardTitle, teacherName, teacherSubject)]);
-        rows.push([]);
-        rows.push([t.copyrightText]);
-        rows.push([]);
-        var headers = [
-          t.name, t.rating, t.goodParticipation, t.talkingInClass, t.notParticipating,
-          t.behavior, t.lateness, t.attendance, t.book, t.notebook, t.homework,
-          t.notes, t.status, t.participationCounter, t.level, t.progressPercentage,
-          t.absenceCounter, t.talkingCounter, t.talkWithoutPermission, t.bookNotActive,
-          t.notebookNotActive, t.homeworkNotActive, t.badBehaviorCounter, t.latenessCounter
-        ];
-        rows.push(headers);
-        studentNames.forEach(function(displayName, displayIndex) {
-          var originalName = originalStudentNames[displayIndex] || displayName;
-          var studentData = data[originalName] || {};
-          var stIdx = studentData.state || 0;
-          var st = t.states[stIdx];
-          var trophy = stIdx === 1 ? "🏆" : "";
-          var gParticipation = studentData.participationCounter || 0;
-          var baseLevel = t.levels[0];
-          if (gParticipation >= 70) baseLevel = t.levels[5];
-          else if (gParticipation >= 50) baseLevel = t.levels[4];
-          else if (gParticipation >= 30) baseLevel = t.levels[3];
-          else if (gParticipation >= 25) baseLevel = t.levels[2];
-          else if (gParticipation >= 10) baseLevel = t.levels[1];
-          var levelPercentages = {};
-          levelPercentages[t.levels[0]] = 10;
-          levelPercentages[t.levels[1]] = 35;
-          levelPercentages[t.levels[2]] = 60;
-          levelPercentages[t.levels[3]] = 75;
-          levelPercentages[t.levels[4]] = 85;
-          levelPercentages[t.levels[5]] = 95;
-          var pPercentage = levelPercentages[baseLevel] || 10;
-          var rowData = [
-            displayName + ' ' + trophy,
-            st.stars,
-            stIdx === 1 ? "✔" : "",
-            stIdx === 2 ? "✔" : "",
-            stIdx === 3 ? "✔" : "",
-            stIdx === 4 ? "✔" : "",
-            (studentData.latenessCounter || 0) > 0 ? "⏰" : "",
-            stIdx === 5 ? t.attendanceText[1] : t.attendanceText[0],
-            studentData.book ? "✅" : "❌",
-            studentData.notebook ? "✅" : "❌",
-            studentData.homework ? "✅" : "❌",
-            studentData.note || "",
-            st.label,
-            studentData.participationCounter || 0,
-            baseLevel,
-            pPercentage + '%',
-            studentData.absenceCounter || 0,
-            studentData.talkCounter || 0,
-            studentData.talkWithoutPermissionCounter || 0,
-            studentData.bookNotActiveCounter || 0,
-            studentData.notebookNotActiveCounter || 0,
-            studentData.homeworkNotActiveCounter || 0,
-            studentData.badBehaviorCounter || 0,
-            studentData.latenessCounter || 0
-          ];
-          rows.push(rowData);
-        });
-        try {
-          var ws = XLSX.utils.aoa_to_sheet(rows);
-          var wb = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(wb, ws, currentLang === 'ar' ? "كشف المتابعة" : "Tracking Report");
-          ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: headers.length - 1 } },
-            { s: { r: 2, c: 0 }, e: { r: 2, c: headers.length - 1 } }
-          ];
-          var fileName = t.excelFileName(teacherName, currentClass, dateFileKey);
-          XLSX.writeFile(wb, fileName);
-          showMessage('✅ تم تصدير الملف بنجاح', 'success');
-        } catch (error) {
-          alert(currentLang === 'ar' ? "حدث خطأ في التصدير" : "Error exporting file");
-          console.error(error);
-        }
-      });
-
       toggleCalendarBtn.addEventListener("click", function() {
         calendarWrapper.classList.toggle('show');
       });
@@ -2542,6 +2845,7 @@
         }
       });
 
+      // ===== تهيئة الصفحة =====
       updateClassSelect();
       initTeacherSelect();
       applyLanguage(currentLang);
@@ -2555,7 +2859,7 @@
       setTimeout(function() {
         if (currentTeacherId && currentClass) {
           loadData();
-          console.log("✅ تم تحميل البيانات تلقائياً عند فتح الصفحة");
+          console.log("✅ تم تحميل البيانات");
         }
       }, 800);
     });
