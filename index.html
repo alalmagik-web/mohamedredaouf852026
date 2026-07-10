@@ -1084,7 +1084,7 @@
           loginBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> ' + (currentLang === 'ar' ? 'تسجيل الخروج' : 'Logout');
           
           var adminButtons = document.querySelectorAll('.admin-only');
-          if (currentUser.email === 'alalmagik@gmail.com') {
+          if (currentUser.email === 'a7112119@gmail.com') {
             adminButtons.forEach(function(btn) {
               btn.classList.add('show');
             });
@@ -1239,7 +1239,7 @@
           await firebaseDb.ref('users/' + currentUser.uid + '/profile').set({
             email: email,
             name: email.split('@')[0] || 'مستخدم',
-            role: email === 'alalmagik@gmail.com' ? 'admin' : 'user',
+            role: email === 'a7112119@gmail.com' ? 'admin' : 'user',
             createdAt: new Date().toISOString()
           });
           
@@ -1578,7 +1578,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
@@ -1712,7 +1712,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
@@ -1741,14 +1741,14 @@
               var userData = dbUsers[uid];
               var userEmail = userData.profile?.email || '';
               
-              if (userEmail === 'alalmagik@gmail.com') {
+              if (userEmail === 'a7112119@gmail.com') {
                 keptCount++;
                 await firebaseDb.ref('users/' + uid + '/teachers').remove();
                 await firebaseDb.ref('users/' + uid + '/profile/name').remove();
                 await firebaseDb.ref('users/' + uid + '/profile/lastLogin').remove();
                 await firebaseDb.ref('users/' + uid + '/profile/role').remove();
                 await firebaseDb.ref('users/' + uid + '/profile').update({
-                  email: 'alalmagik@gmail.com'
+                  email: 'a7112119@gmail.com'
                 });
                 console.log('✅ تم تنظيف بيانات المشرف');
                 continue;
@@ -1776,7 +1776,7 @@
             updateTable();
             boardTitleEl.textContent = translations[currentLang].boardTitle;
             
-            showMessage('✅ تم حذف كل البيانات بنجاح!\nتم الاحتفاظ فقط بالمشرف (alalmagik@gmail.com)', 'success');
+            showMessage('✅ تم حذف كل البيانات بنجاح!\nتم الاحتفاظ فقط بالمشرف (a7112119@gmail.com)', 'success');
             
             setTimeout(function() {
               location.reload();
@@ -1796,7 +1796,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
@@ -1851,7 +1851,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
@@ -1948,7 +1948,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
@@ -2068,12 +2068,12 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
           
-          var confirmDelete = confirm('⚠️ تحذير: هل أنت متأكد من حذف جميع المستخدمين ما عدا المشرف (alalmagik@gmail.com)؟\n\nسيتم حذف جميع بيانات المستخدمين الآخرين بشكل نهائي!');
+          var confirmDelete = confirm('⚠️ تحذير: هل أنت متأكد من حذف جميع المستخدمين ما عدا المشرف (a7112119@gmail.com)؟\n\nسيتم حذف جميع بيانات المستخدمين الآخرين بشكل نهائي!');
           if (!confirmDelete) return;
           
           var confirmDelete2 = confirm('⚠️ تأكيد نهائي: هل أنت متأكد من حذف جميع المستخدمين باستثناء المشرف؟\nلا يمكن التراجع عن هذا الإجراء!');
@@ -2091,7 +2091,7 @@
               var userData = dbUsers[uid];
               var userEmail = userData.profile?.email || '';
               
-              if (userEmail === 'alalmagik@gmail.com') {
+              if (userEmail === 'a7112119@gmail.com') {
                 keptCount++;
                 console.log('✅ الاحتفاظ بالمشرف:', userEmail);
                 continue;
@@ -2122,7 +2122,7 @@
             showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
             return;
           }
-          if (currentUser.email !== 'alalmagik@gmail.com') {
+          if (currentUser.email !== 'a7112119@gmail.com') {
             showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
             return;
           }
