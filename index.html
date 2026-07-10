@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     
     <!-- إضافة Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compatjs"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
     
@@ -1045,7 +1045,7 @@
         
         try {
           // جلب جميع المستخدمين من Authentication
-          const authUsers = await firebaseAuth.listUsers();
+          const authUsers = await firebaseAuth.// ===== زر تصحيح الأيميلات (بدون listUsers) ===== document.getElementById('fixEmailsBtn').addEventListener('click', async function() {   if (!currentUser) {     showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');     return;   }   if (currentUser.email !== 'alalmagik@gmail.com') {     showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');     return;   }      showMessage('⏳ جاري تصحيح الأيميلات...', 'info');      try {     // جلب جميع المستخدمين من Database فقط     const snapshot = await firebaseDb.ref('users').once('value');     const dbUsers = snapshot.val() || {};          let fixedCount = 0;     let usersWithoutEmail = [];          // تصحيح الأيميلات     for (const uid in dbUsers) {       const userData = dbUsers[uid];              // إذا لم يكن هناك بريد في profile       if (!userData.profile?.email) {         // حاول استخراج البريد من بيانات المستخدم الأخرى         let email = null;                  // محاولة جلب البريد من Authentication (إذا كان المستخدم هو المشرف)         if (currentUser.uid === uid && currentUser.email) {           email = currentUser.email;         }                  // إذا لم نجد بريد، نطلب من المستخدم إدخاله         if (!email) {           usersWithoutEmail.push(uid);           continue;         }                  // حفظ البريد         await firebaseDb.ref(`users/${uid}/profile/email`).set(email);         fixedCount++;         console.log(`✅ تم إضافة بريد للمستخدم: ${email}`);       }     }          // إذا كان هناك مستخدمين بدون بريد، اطلب من المشرف إدخال بريد لكل منهم     if (usersWithoutEmail.length > 0) {       for (const uid of usersWithoutEmail) {         const email = prompt(`أدخل البريد الإلكتروني للمستخدم (UID: ${uid.substring(0, 10)}...):`);         if (email && email.trim()) {           await firebaseDb.ref(`users/${uid}/profile/email`).set(email.trim());           fixedCount++;           console.log(`✅ تم إضافة بريد للمستخدم: ${email.trim()}`);         }       }     }          let resultMessage = `✅ تم تصحيح ${fixedCount} بريد إلكتروني`;     if (fixedCount === 0) resultMessage = '✅ جميع المستخدمين لديهم بريد إلكتروني صحيح.';          showMessage(resultMessage, 'success');          // إعادة تحميل البيانات     setTimeout(() => {       location.reload();     }, 1500);        } catch (error) {     console.error('❌ خطأ:', error);     showMessage('❌ حدث خطأ: ' + error.message, 'error');   } });;
           const authEmails = {};
           authUsers.users.forEach(user => {
             if (user.email) {
