@@ -31,6 +31,8 @@
         .btn-update-subject { background: #8b5cf6; color: white; } .btn-update-subject:hover { background: #7c3aed; }
         .btn-admin { background: #8b5cf6; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; display: inline-flex; align-items: center; gap: 5px; }
         .btn-admin:hover { background: #7c3aed; }
+        .btn-danger { background: #dc2626; color: white; } .btn-danger:hover { background: #b91c1c; }
+        .btn-view-data { background: #6366f1; color: white; } .btn-view-data:hover { background: #4f46e5; }
         .firebase-status { background: rgba(255, 255, 255, 0.2); padding: 6px 10px; border-radius: 5px; font-size: 12px; font-weight: bold; }
         .firebase-status.online { background: rgba(52, 168, 83, 0.3); border-left: 3px solid #34a853; }
         .firebase-status.offline { background: rgba(234, 67, 53, 0.3); border-left: 3px solid #ea4335; }
@@ -259,6 +261,13 @@
             color: white;
         }
 
+        .admin-only {
+            display: none !important;
+        }
+        .admin-only.show {
+            display: inline-flex !important;
+        }
+
         @media (max-width: 768px) { body { padding: 8px; } #controls, .top-section { flex-direction: column; } #controls input, #controls button, .top-section input, .top-section select, .top-section button { width: 100%; } th, td { padding: 5px 4px; font-size: 10px; } .table-container { border-radius: 6px; } .firebase-section { flex-direction: column; align-items: stretch; } .firebase-controls { justify-content: center; } .day-cell { padding: 5px 0; font-size: 12px; } }
         [dir="rtl"] .control-group label, [dir="rtl"] #boardTitle, [dir="rtl"] .copyright-footer { text-align: right; }
         [dir="ltr"] .control-group label, [dir="ltr"] #boardTitle, [dir="ltr"] .copyright-footer { text-align: left; }
@@ -276,11 +285,16 @@
       <button id="useCloudBtn" class="firebase-btn btn-cloud"><i class="fas fa-cloud"></i> تخزين سحابي</button>
       <button id="syncDataBtn" class="firebase-btn btn-sync"><i class="fas fa-sync-alt"></i> مزامنة</button>
       <button id="loginBtn" class="firebase-btn btn-login"><i class="fas fa-sign-in-alt"></i> تسجيل الدخول</button>
-      <button id="fixEmailsBtn" class="firebase-btn btn-fix-emails"><i class="fas fa-envelope"></i> تصحيح الأيميلات</button>
-      <button id="adminViewBtn" class="btn-admin"><i class="fas fa-eye"></i> عرض الكل (مشرف)</button>
-      <button id="exportAllDataBtn" class="firebase-btn btn-export-excel"><i class="fas fa-file-excel"></i> تصدير جميع البيانات</button>
-      <button id="deleteAllUsersBtn" class="firebase-btn btn-delete-all-users"><i class="fas fa-trash-alt"></i> حذف جميع المستخدمين</button>
-      <button id="updateSubjectBtn" class="firebase-btn btn-update-subject"><i class="fas fa-edit"></i> تحديث مواد المعلمين</button>
+      
+      <!-- ===== أزرار المشرف (تظهر فقط بعد تسجيل الدخول) ===== -->
+      <button id="fixEmailsBtn" class="firebase-btn btn-fix-emails admin-only"><i class="fas fa-envelope"></i> تصحيح الأيميلات</button>
+      <button id="adminViewBtn" class="btn-admin admin-only"><i class="fas fa-eye"></i> عرض الكل (مشرف)</button>
+      <button id="exportAllDataBtn" class="firebase-btn btn-export-excel admin-only"><i class="fas fa-file-excel"></i> تصدير جميع البيانات</button>
+      <button id="deleteAllUsersBtn" class="firebase-btn btn-danger admin-only"><i class="fas fa-trash-alt"></i> حذف جميع المستخدمين</button>
+      <button id="updateSubjectBtn" class="firebase-btn btn-update-subject admin-only"><i class="fas fa-edit"></i> تحديث مواد المعلمين</button>
+      <button id="clearAllDataBtn" class="firebase-btn btn-danger admin-only"><i class="fas fa-fire"></i> حذف كل البيانات</button>
+      <button id="viewAllDataBtn" class="firebase-btn btn-view-data admin-only"><i class="fas fa-database"></i> عرض جميع البيانات</button>
+      
       <div id="firebaseStatus" class="firebase-status offline"><i class="fas fa-wifi"></i> غير متصل</div>
     </div>
   </div>
@@ -579,6 +593,8 @@
       var exportAllDataBtn = document.getElementById("exportAllDataBtn");
       var deleteAllUsersBtn = document.getElementById("deleteAllUsersBtn");
       var updateSubjectBtn = document.getElementById("updateSubjectBtn");
+      var clearAllDataBtn = document.getElementById("clearAllDataBtn");
+      var viewAllDataBtn = document.getElementById("viewAllDataBtn");
       var importExcel = document.getElementById("importExcel");
       var importExcelLabel = document.getElementById("importExcelLabel");
       var exportExcel = document.getElementById("exportExcel");
@@ -1060,16 +1076,34 @@
       // ===== دوال Firebase =====
       function updateFirebaseUI() {
         var t = translations[currentLang];
+        
         if (currentUser) {
           var email = currentUser.email || t.firebase.offline;
           firebaseStatus.innerHTML = '<i class="fas fa-user"></i> ' + email.substring(0, 20);
           firebaseStatus.className = 'firebase-status online';
           loginBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> ' + (currentLang === 'ar' ? 'تسجيل الخروج' : 'Logout');
+          
+          var adminButtons = document.querySelectorAll('.admin-only');
+          if (currentUser.email === 'alalmagik@gmail.com') {
+            adminButtons.forEach(function(btn) {
+              btn.classList.add('show');
+            });
+          } else {
+            adminButtons.forEach(function(btn) {
+              btn.classList.remove('show');
+            });
+          }
         } else {
           firebaseStatus.innerHTML = '<i class="fas fa-wifi"></i> ' + t.firebase.offline;
           firebaseStatus.className = 'firebase-status offline';
           loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ' + (currentLang === 'ar' ? 'تسجيل الدخول' : 'Login');
+          
+          var adminButtons = document.querySelectorAll('.admin-only');
+          adminButtons.forEach(function(btn) {
+            btn.classList.remove('show');
+          });
         }
+        
         if (storageMode === 'local') {
           useLocalBtn.style.opacity = '1';
           useLocalBtn.style.transform = 'scale(1.05)';
@@ -1537,6 +1571,224 @@
         syncDataBtn.addEventListener('click', syncData);
       }
 
+      // ===== زر عرض جميع البيانات =====
+      if (viewAllDataBtn) {
+        viewAllDataBtn.addEventListener('click', async function() {
+          if (!currentUser) {
+            showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
+            return;
+          }
+          if (currentUser.email !== 'alalmagik@gmail.com') {
+            showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
+            return;
+          }
+          
+          showMessage('⏳ جاري تحميل جميع البيانات...', 'info');
+          
+          try {
+            var snapshot = await firebaseDb.ref('users').once('value');
+            var allData = snapshot.val();
+            
+            if (!allData) {
+              showMessage('⚠️ لا توجد بيانات', 'info');
+              return;
+            }
+            
+            var html = '<h3>📊 جميع البيانات المخزنة (بما فيها القديمة)</h3><hr>';
+            var totalUsers = 0;
+            var totalTeachers = 0;
+            var totalClasses = 0;
+            var totalStudents = 0;
+            var totalDays = 0;
+            
+            Object.keys(allData).forEach(function(uid) {
+              var userData = allData[uid];
+              var userEmail = userData.profile?.email || '⚠️ لا يوجد بريد';
+              totalUsers++;
+              
+              html += '<div style="border:2px solid #4f46e5; padding:12px; margin:10px 0; border-radius:8px; background:white;">';
+              html += '<div style="background:#e0e7ff; padding:8px; border-radius:5px;">';
+              html += '<strong>📧 البريد:</strong> ' + userEmail;
+              html += ' | <strong>🆔 UID:</strong> ' + uid.substring(0,12) + '...';
+              html += '</div>';
+              
+              if (userData.teachers) {
+                Object.keys(userData.teachers).forEach(function(teacherId) {
+                  var teacher = userData.teachers[teacherId];
+                  totalTeachers++;
+                  
+                  html += '<div style="padding-right:15px; background:#f8fafc; margin:5px 0; padding:8px; border-radius:5px; border-right:3px solid #059669;">';
+                  html += '  👨‍🏫 <strong>المعلم:</strong> ' + (teacher.name || teacherId);
+                  
+                  if (teacher.classes) {
+                    Object.keys(teacher.classes).forEach(function(cls) {
+                      var classData = teacher.classes[cls];
+                      totalClasses++;
+                      
+                      html += '<div style="padding-right:15px; margin:5px 0; background:#f0fdf4; padding:8px; border-radius:5px;">';
+                      html += '  📚 <strong>القسم:</strong> ' + cls;
+                      
+                      if (classData.originalStudentNames) {
+                        html += ' | 👨‍🎓 عدد الطلاب: ' + classData.originalStudentNames.length;
+                        totalStudents += classData.originalStudentNames.length;
+                      }
+                      
+                      if (classData.datesData) {
+                        var days = Object.keys(classData.datesData).sort();
+                        html += ' | 📅 عدد الأيام: ' + days.length;
+                        totalDays += days.length;
+                        
+                        html += '<br><div style="padding-right:15px; margin-top:5px; font-size:13px;">';
+                        html += '<strong>📅 التواريخ:</strong> ';
+                        days.forEach(function(date, idx) {
+                          html += date;
+                          if (idx < days.length - 1) html += '، ';
+                        });
+                        html += '</div>';
+                        
+                        if (classData.originalStudentNames && classData.originalStudentNames.length > 0) {
+                          html += '<div style="padding-right:15px; margin-top:5px; font-size:12px;">';
+                          html += '<strong>👨‍🎓 عينة من الطلاب:</strong><br>';
+                          var sampleStudents = classData.originalStudentNames.slice(0, 5);
+                          sampleStudents.forEach(function(studentName) {
+                            var studentData = null;
+                            if (days.length > 0) {
+                              var lastDate = days[days.length - 1];
+                              if (classData.datesData[lastDate] && classData.datesData[lastDate][studentName]) {
+                                studentData = classData.datesData[lastDate][studentName];
+                              }
+                            }
+                            html += '  👤 ' + studentName;
+                            if (studentData) {
+                              html += ' (مشاركات: ' + (studentData.participationCounter || 0);
+                              html += ' | غياب: ' + (studentData.absenceCounter || 0);
+                              html += ' | تأخر: ' + (studentData.latenessCounter || 0) + ')';
+                            }
+                            html += '<br>';
+                          });
+                          if (classData.originalStudentNames.length > 5) {
+                            html += '  ... (+' + (classData.originalStudentNames.length - 5) + ')';
+                          }
+                          html += '</div>';
+                        }
+                      } else {
+                        html += ' | 📅 لا توجد أيام مسجلة';
+                      }
+                      html += '</div>';
+                    });
+                  }
+                  html += '</div>';
+                });
+              }
+              html += '</div>';
+            });
+            
+            html += '<div style="background:#f3f4f6; padding:15px; border-radius:5px; margin-top:15px;">';
+            html += '<h4>📊 إحصائيات عامة:</h4>';
+            html += '👤 المستخدمين: ' + totalUsers + '<br>';
+            html += '👨‍🏫 المعلمين: ' + totalTeachers + '<br>';
+            html += '📚 الأقسام: ' + totalClasses + '<br>';
+            html += '👨‍🎓 الطلاب: ' + totalStudents + '<br>';
+            html += '📅 الأيام المسجلة: ' + totalDays + '<br>';
+            html += '</div>';
+            
+            var win = window.open('', '_blank', 'width=1000,height=700');
+            win.document.write('<html dir="rtl"><head><title>جميع البيانات المخزنة</title><style>body{font-family:Arial;padding:20px;background:#f5f5f5;direction:rtl;}button{padding:10px 20px;background:#4f46e5;color:white;border:none;border-radius:5px;cursor:pointer;margin-top:20px;font-size:16px;}button:hover{background:#4338ca;}</style></head><body>' + html + '<button onclick="window.close()">❌ إغلاق</button></body></html>');
+            win.document.close();
+            
+            showMessage('✅ تم تحميل جميع البيانات', 'success');
+            
+          } catch (error) {
+            console.error('❌ خطأ:', error);
+            showMessage('❌ حدث خطأ: ' + error.message, 'error');
+          }
+        });
+      }
+
+      // ===== زر حذف كل البيانات =====
+      if (clearAllDataBtn) {
+        clearAllDataBtn.addEventListener('click', async function() {
+          if (!currentUser) {
+            showMessage('⚠️ الرجاء تسجيل الدخول أولاً', 'error');
+            return;
+          }
+          if (currentUser.email !== 'alalmagik@gmail.com') {
+            showMessage('⚠️ هذه الميزة للمشرف فقط', 'error');
+            return;
+          }
+          
+          var confirmDelete = confirm('🔥 تحذير شديد: هل أنت متأكد من حذف كل البيانات؟\n\nسيتم حذف:\n- جميع المستخدمين (ما عدا المشرف)\n- جميع المعلمين\n- جميع الأقسام\n- جميع الطلاب\n- جميع الأيميلات\n\nلا يمكن التراجع عن هذا الإجراء!');
+          if (!confirmDelete) return;
+          
+          var confirmDelete2 = confirm('⚠️ تأكيد نهائي: هل أنت متأكد من حذف كل البيانات؟\nهذا الإجراء نهائي ولا يمكن التراجع عنه!');
+          if (!confirmDelete2) return;
+          
+          var confirmDelete3 = prompt('⚠️ للتأكيد النهائي، اكتب كلمة "حذف" في المربع أدناه:');
+          if (confirmDelete3 !== 'حذف') {
+            showMessage('❌ تم إلغاء عملية الحذف', 'error');
+            return;
+          }
+          
+          showMessage('⏳ جاري حذف كل البيانات...', 'info');
+          
+          try {
+            var snapshot = await firebaseDb.ref('users').once('value');
+            var dbUsers = snapshot.val() || {};
+            var deletedCount = 0;
+            var keptCount = 0;
+            
+            for (var uid in dbUsers) {
+              var userData = dbUsers[uid];
+              var userEmail = userData.profile?.email || '';
+              
+              if (userEmail === 'alalmagik@gmail.com') {
+                keptCount++;
+                await firebaseDb.ref('users/' + uid + '/teachers').remove();
+                await firebaseDb.ref('users/' + uid + '/profile/name').remove();
+                await firebaseDb.ref('users/' + uid + '/profile/lastLogin').remove();
+                await firebaseDb.ref('users/' + uid + '/profile/role').remove();
+                await firebaseDb.ref('users/' + uid + '/profile').update({
+                  email: 'alalmagik@gmail.com'
+                });
+                console.log('✅ تم تنظيف بيانات المشرف');
+                continue;
+              }
+              
+              await firebaseDb.ref('users/' + uid).remove();
+              deletedCount++;
+              console.log('🗑️ تم حذف المستخدم:', userEmail || uid);
+            }
+            
+            localStorage.clear();
+            
+            teachersList = defaultTeachers;
+            classesList = defaultClasses;
+            originalStudentNames = [];
+            studentNames = [];
+            allHistoryData = {};
+            data = {};
+            
+            saveTeachersList();
+            saveClassesList();
+            initTeacherSelect();
+            updateClassSelect();
+            initStudentsUI();
+            updateTable();
+            boardTitleEl.textContent = translations[currentLang].boardTitle;
+            
+            showMessage('✅ تم حذف كل البيانات بنجاح!\nتم الاحتفاظ فقط بالمشرف (alalmagik@gmail.com)', 'success');
+            
+            setTimeout(function() {
+              location.reload();
+            }, 2000);
+            
+          } catch (error) {
+            console.error('❌ خطأ:', error);
+            showMessage('❌ حدث خطأ: ' + error.message, 'error');
+          }
+        });
+      }
+
       // ===== زر تصحيح الأيميلات =====
       if (fixEmailsBtn) {
         fixEmailsBtn.addEventListener('click', async function() {
@@ -1636,7 +1888,7 @@
                 Object.keys(userData.teachers).forEach(function(teacherId) {
                   var teacher = userData.teachers[teacherId];
                   var teacherInfo = teachersList.find(function(t) { return t.id === teacherId; });
-                  var teacherName = teacherInfo ? teacherInfo.name : teacherId;
+                  var teacherName = teacherInfo ? teacherInfo.name : (teacher.name || teacherId);
                   var teacherSubject = teacherInfo ? teacherInfo.subject : (teacher.subject || 'غير معروف');
                   
                   html += '<div style="padding-right:15px; background:#f8fafc; margin:5px 0; padding:8px; border-radius:5px; border-right:3px solid #4f46e5;">';
@@ -1716,7 +1968,6 @@
             workbook.creator = 'Admin Dashboard';
             workbook.created = new Date();
             
-            // الورقة الأولى: المستخدمين
             var worksheet1 = workbook.addWorksheet('المستخدمين', {
               pageSetup: { paperSize: 9, orientation: 'landscape' }
             });
@@ -1913,7 +2164,6 @@
       }
 
       // ===== ربط باقي الأزرار =====
-      // دوال الطلاب والجدول
       function initStudentsUI() {
         studentsContainer.innerHTML = "";
         studentNames.forEach(function(displayName) {
@@ -2552,11 +2802,9 @@
         updateFirebaseUI();
       }
 
-      // ربط أزرار إضافة وحذف الأقسام
       addClassBtn.addEventListener("click", addNewClass);
       deleteClassBtn.addEventListener("click", deleteCurrentClass);
 
-      // ربط أزرار المعلمين
       teacherSelect.addEventListener("change", function(e) { selectTeacher(e.target.value); });
       classSelect.addEventListener("change", function(e) { selectClass(e.target.value); });
       
@@ -2662,7 +2910,6 @@
         reader.readAsBinaryString(file);
       });
 
-      // ربط أزرار الطلاب
       addStudentBtn.addEventListener("click", async function() {
         if (!currentTeacherId) { alert(translations[currentLang].errorSelectTeacher); return; }
         if (!currentClass) { alert(translations[currentLang].errorSelectClass); return; }
@@ -2937,7 +3184,6 @@
         }
       });
 
-      // ربط أزرار اللغة
       document.getElementById("switchToAr").addEventListener("click", function() { applyLanguage('ar'); });
       document.getElementById("switchToEn").addEventListener("click", function() { applyLanguage('en'); });
 
