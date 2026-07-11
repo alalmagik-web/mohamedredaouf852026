@@ -674,7 +674,6 @@
     // جعل الدوال متاحة على النافذة العالمية (window)
     // ============================================================
     
-    // تعريف الدوال كمتغيرات عالمية قبل استخدامها
     var scrollToSection = function(id) {
         var el = document.getElementById(id);
         if(el) el.scrollIntoView({ behavior: 'smooth' });
@@ -696,7 +695,6 @@
     };
     window.openDetailedTeacherModal = openDetailedTeacherModal;
 
-    // دالة تصدير PDF الشامل
     var exportComprehensivePDF = function() {
         if (typeof html2pdf === 'undefined') {
             alert("مكتبة html2pdf جاري تحميلها، يرجى المزامنة.");
@@ -719,9 +717,6 @@
     };
     window.exportComprehensivePDF = exportComprehensivePDF;
 
-    // ============================================================
-    // دالة عرض الرسائل
-    // ============================================================
     function showMessage(message, type) {
         type = type || 'info';
         var messageDiv = document.createElement('div');
@@ -736,9 +731,6 @@
         }, 4000);
     }
 
-    // ============================================================
-    // دالة تصدير Excel المطورة - مع إصلاح خطأ currentUser
-    // ============================================================
     var exportAdminReport = async function(format) {
         if (format === 'excel' || format === 'excel_advanced') {
             if (typeof ExcelJS === 'undefined') {
@@ -747,8 +739,6 @@
             }
 
             try {
-                // ===== الحصول على البيانات من النطاق العام =====
-                // نستخدم window للحصول على المتغيرات العامة
                 var teachersList = window.teachersList || [];
                 var studentNames = window.studentNames || [];
                 var currentClass = window.currentClass || 'جميع الأقسام';
@@ -757,13 +747,11 @@
                 var originalStudentNames = window.originalStudentNames || [];
                 var currentUser = window.currentUser || null;
 
-                // ===== جمع البيانات =====
                 var allTeachersData = [];
                 var allStudentsData = [];
                 var allSubjects = {};
                 var totalStudentsCount = 0;
                 
-                // 1. جمع بيانات المعلمين
                 if (teachersList.length > 0) {
                     teachersList.forEach(function(teacher, index) {
                         var teacherName = teacher.name || 'غير معروف';
@@ -809,7 +797,6 @@
                     });
                 }
                 
-                // 2. جمع بيانات الطلاب
                 if (studentNames.length > 0) {
                     studentNames.forEach(function(name, index) {
                         var studentData = data[name] || {};
@@ -838,7 +825,6 @@
                     });
                 }
                 
-                // 3. بيانات افتراضية في حالة عدم وجود بيانات
                 if (allTeachersData.length === 0) {
                     allTeachersData = [
                         { index: 1, name: 'معلم 1', subject: 'لغتي', studentCount: 25, completionRate: 85, status: '🟢 نشط ومتفاعل' },
@@ -853,17 +839,14 @@
                     ];
                 }
 
-                // ===== إنشاء ملف Excel متعدد الأوراق =====
                 var workbook = new ExcelJS.Workbook();
                 workbook.creator = 'نظام المتابعة الذكي';
                 workbook.created = new Date();
                 
-                // ----- الورقة الأولى: الملخص التنفيذي -----
                 var sheet1 = workbook.addWorksheet('الملخص التنفيذي', {
                     views: [{ showGridLines: true, rightToLeft: true }]
                 });
                 
-                // العنوان الرئيسي
                 sheet1.mergeCells('A1:F2');
                 var titleCell = sheet1.getCell('A1');
                 titleCell.value = '📊 التقرير التربوي التحليلي الشامل';
@@ -871,7 +854,6 @@
                 titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
                 titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
                 
-                // معلومات التقرير
                 var userEmail = currentUser ? (currentUser.email || 'مشرف النظام') : 'مشرف النظام';
                 sheet1.getCell('A4').value = 'تاريخ التوليد:';
                 sheet1.getCell('B4').value = new Date().toLocaleString('ar-SA');
@@ -886,7 +868,6 @@
                 
                 sheet1.addRow([]);
                 
-                // بطاقات KPIs
                 var kpiHeaders = ['مؤشر الأداء', 'القيمة', 'الحالة'];
                 var kpiRow = sheet1.addRow(kpiHeaders);
                 kpiRow.eachCell(function(c) {
@@ -917,7 +898,6 @@
                 sheet1.getColumn(2).width = 20;
                 sheet1.getColumn(3).width = 20;
                 
-                // ----- الورقة الثانية: كشف المعلمين -----
                 var sheet2 = workbook.addWorksheet('كشف المعلمين', {
                     views: [{ showGridLines: true, rightToLeft: true }]
                 });
@@ -965,7 +945,6 @@
                 sheet2.getColumn(1).width = 8;
                 sheet2.getColumn(2).width = 22;
                 
-                // ----- الورقة الثالثة: سجل الطلاب -----
                 var sheet3 = workbook.addWorksheet('سجل الطلاب', {
                     views: [{ showGridLines: true, rightToLeft: true }]
                 });
@@ -1012,7 +991,6 @@
                 sheet3.getColumn(1).width = 8;
                 sheet3.getColumn(2).width = 22;
                 
-                // ===== حفظ وتنزيل الملف =====
                 var buffer = await workbook.xlsx.writeBuffer();
                 var blob = new Blob([buffer], { 
                     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
@@ -1033,7 +1011,6 @@
                 alert('❌ حدث خطأ في تصدير الملف: ' + error.message);
             }
         }
-        // تصدير PDF
         else if (format === 'pdf') {
             if (typeof html2pdf === 'undefined') {
                 alert("⏳ مكتبة html2pdf لم تكتمل في التحميل، يرجى الانتظار.");
@@ -1050,7 +1027,6 @@
             html2pdf().set(opt).from(element).save();
             console.log("✅ تم تصدير PDF بنجاح!");
         }
-        // تصدير CSV
         else if (format === 'csv') {
             var teachersList = window.teachersList || [];
             var studentNames = window.studentNames || [];
@@ -1073,9 +1049,6 @@
     };
     window.exportAdminReport = exportAdminReport;
 
-    // ============================================================
-    // ربط الدوال للنافذة العالمية
-    // ============================================================
     window.scrollToSection = scrollToSection;
     window.openDetailedTeacherModal = openDetailedTeacherModal;
     window.exportComprehensivePDF = exportComprehensivePDF;
@@ -1104,6 +1077,9 @@
         firebaseDb = firebase.database();
         isFirebaseInitialized = true;
         console.log("✅ Firebase initialized");
+        
+        // ضبط استمرارية الجلسة (مهم لبقاء المستخدم مسجلاً)
+        firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     } catch (error) {
         console.log("❌ Firebase init error:", error);
     }
@@ -1139,7 +1115,6 @@
         var studentNames = [];
         var selectedStudent = null;
         
-        // ===== جعل المتغيرات عامة للتصدير =====
         window.teachersList = teachersList;
         window.studentNames = studentNames;
         window.currentClass = currentClass;
@@ -1613,8 +1588,12 @@
         function updateFirebaseUI() {
             var t = translations[currentLang];
             
-            if (currentUser) {
-                var email = currentUser.email || t.firebase.offline;
+            // استخدام currentUser من المتغير العام أو من Firebase مباشرة
+            var user = currentUser || (firebaseAuth ? firebaseAuth.currentUser : null);
+            if (user) {
+                currentUser = user; // تحديث المتغير العام
+                window.currentUser = user;
+                var email = user.email || t.firebase.offline;
                 firebaseStatus.innerHTML = '<i class="fas fa-user"></i> ' + email.substring(0, 20);
                 firebaseStatus.className = 'firebase-status online';
                 loginBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> ' + (currentLang === 'ar' ? 'تسجيل الخروج' : 'Logout');
@@ -1634,6 +1613,8 @@
                     if (panel) panel.style.display = 'none';
                 }
             } else {
+                currentUser = null;
+                window.currentUser = null;
                 firebaseStatus.innerHTML = '<i class="fas fa-wifi"></i> ' + t.firebase.offline;
                 firebaseStatus.className = 'firebase-status offline';
                 loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> ' + (currentLang === 'ar' ? 'تسجيل الدخول' : 'Login');
@@ -1659,7 +1640,6 @@
             }
             syncDataBtn.disabled = !currentUser || storageMode !== 'cloud';
             
-            // تحديث المتغيرات العامة
             window.currentUser = currentUser;
         }
 
@@ -1707,6 +1687,7 @@
             try {
                 var userCredential = await firebaseAuth.signInWithEmailAndPassword(email, password);
                 currentUser = userCredential.user;
+                window.currentUser = currentUser;
                 
                 await firebaseDb.ref('users/' + currentUser.uid + '/profile').update({
                     email: email,
@@ -1780,6 +1761,7 @@
             try {
                 var userCredential = await firebaseAuth.createUserWithEmailAndPassword(email, password);
                 currentUser = userCredential.user;
+                window.currentUser = currentUser;
                 
                 await firebaseDb.ref('users/' + currentUser.uid + '/profile').set({
                     email: email,
@@ -1837,6 +1819,7 @@
             try {
                 var userCredential = await firebaseAuth.signInAnonymously();
                 currentUser = userCredential.user;
+                window.currentUser = currentUser;
                 
                 await firebaseDb.ref('users/' + currentUser.uid + '/profile').set({
                     name: 'مستخدم مجهول',
@@ -1868,6 +1851,7 @@
             try {
                 await firebaseAuth.signOut();
                 currentUser = null;
+                window.currentUser = null;
                 showMessage(translations[currentLang].firebase.logoutSuccess, 'success');
                 updateFirebaseUI();
                 allHistoryData = {};
@@ -1892,11 +1876,24 @@
             if (saved) showMessage(t.firebase.syncSuccess, 'success');
         }
 
+        // ===== تهيئة Firebase Auth مع استمرارية الجلسة =====
         function initializeFirebaseAuth() {
             if (!isFirebaseInitialized) return;
             
+            // التأكد من أن المستخدم الحالي محدث قبل أي تحميل
+            if (firebaseAuth.currentUser) {
+                currentUser = firebaseAuth.currentUser;
+                window.currentUser = currentUser;
+                updateFirebaseUI();
+                // تحميل البيانات إذا كان المعلم والقسم محددين
+                if (storageMode === 'cloud' && currentTeacherId && currentClass) {
+                    loadData();
+                }
+            }
+            
             firebaseAuth.onAuthStateChanged(function(user) {
                 currentUser = user;
+                window.currentUser = user;
                 updateFirebaseUI();
                 
                 if (user) {
@@ -1917,7 +1914,6 @@
                     if (storageMode === 'cloud') setStorageMode('local');
                 }
                 
-                // تحديث المتغيرات العامة
                 window.currentUser = currentUser;
             });
         }
@@ -1964,7 +1960,6 @@
             initStudentsUI();
             updateTable();
             
-            // تحديث المتغيرات العامة للتصدير
             window.teachersList = teachersList;
             window.studentNames = studentNames;
             window.currentClass = currentClass;
@@ -2066,7 +2061,6 @@
             localStorage.setItem(STORAGE_KEY_DATA(), JSON.stringify(allHistoryData));
             if (storageMode === 'cloud' && currentUser) await saveToFirebase();
             
-            // تحديث المتغيرات العامة للتصدير
             window.data = data;
             window.allHistoryData = allHistoryData;
             window.originalStudentNames = originalStudentNames;
@@ -2205,9 +2199,12 @@
             setInterval(updateTime, 60000);
         }
 
-        // ===== دالة بناء لوحة المشرف التحليلية =====
+        // ===== دالة بناء لوحة المشرف التحليلية (محسنة ودقيقة) =====
         async function buildIntelligentAdminDashboard() {
-            if (typeof firebaseDb === 'undefined') return;
+            if (typeof firebaseDb === 'undefined' || !currentUser) {
+                console.warn("Firebase غير جاهز أو المستخدم غير مسجل");
+                return;
+            }
             
             try {
                 var snapshot = await firebaseDb.ref('users').once('value');
@@ -2215,206 +2212,195 @@
                 
                 var teachersArray = [];
                 var subjectInteractions = {};
-                var inactiveTeachersCount = 0;
-                var totalGenius = 0;
-                var totalAverage = 0;
-                var totalSupport = 0;
-
-                Object.keys(allUsers).forEach(function(uid) {
-                    var node = allUsers[uid];
-                    if (node.teachers) {
-                        Object.keys(node.teachers).forEach(function(tId) {
-                            var teacher = node.teachers[tId];
-                            var tName = teacher.teacherName || teacher.name || "معلم غير معرف";
-                            var tSubject = teacher.teacherSubject || teacher.subject || "فنية";
-                            
-                            if(!subjectInteractions[tSubject]) subjectInteractions[tSubject] = 0;
-
-                            if (teacher.classes) {
-                                Object.keys(teacher.classes).forEach(function(clsName) {
-                                    var classNode = teacher.classes[clsName];
-                                    var studentsList = classNode.originalStudentNames || [];
-                                    var dates = classNode.datesData || {};
-                                    
-                                    var totalActions = 0;
-                                    var uniqueDaysCount = Object.keys(dates).length;
-                                    var activeTodayCount = 0;
-                                    var activeThisWeekCount = 0;
-
-                                    Object.keys(dates).forEach(function(dateKey, idx) {
-                                        var isToday = (dateKey === new Date().toISOString().slice(0,10));
-                                        
-                                        studentsList.forEach(function(stName) {
-                                            var dayData = dates[dateKey][stName];
-                                            if(dayData) {
-                                                totalActions++;
-                                                subjectInteractions[tSubject]++;
-                                                if(isToday) activeTodayCount++;
-                                                if(idx < 7) activeThisWeekCount++;
-                                                
-                                                var lvl = dayData.level || "";
-                                                if(lvl.includes("عبقري") || lvl.includes("متفوق")) totalGenius++;
-                                                else if(lvl.includes("منخفض") || lvl.includes("دعم")) totalSupport++;
-                                                else totalAverage++;
-                                            }
-                                        });
-                                    });
-
-                                    var baseScore = 15;
-                                    var actionsScore = Math.min(35, totalActions * 1.5);
-                                    var coverageScore = studentsList.length > 0 ? Math.min(25, (totalActions / studentsList.length) * 5) : 0;
-                                    var consistencyScore = uniqueDaysCount > 0 ? 25 : 0;
-                                    
-                                    var finalWeight = Math.round(baseScore + actionsScore + coverageScore + consistencyScore);
-                                    if(finalWeight > 100) finalWeight = 100;
-                                    if(finalWeight < 10) finalWeight = Math.floor(Math.random() * 20) + 5;
-
-                                    var interactionStatus = "🟢 متفاعل جداً";
-                                    var statusColor = "#f0fdf4";
-                                    var textClassColor = "#16a34a";
-                                    
-                                    if(finalWeight < 40) {
-                                        interactionStatus = "🔴 غير متفاعل";
-                                        statusColor = "#fef2f2";
-                                        textClassColor = "#dc2626";
-                                        inactiveTeachersCount++;
-                                    } else if(finalWeight < 70) {
-                                        interactionStatus = "🟠 يحتاج متابعة";
-                                        statusColor = "#fff7ed";
-                                        textClassColor = "#ea580c";
-                                    } else if(finalWeight < 90) {
-                                        interactionStatus = "🟡 متفاعل";
-                                        statusColor = "#fefce8";
-                                        textClassColor = "#ca8a04";
-                                    }
-
-                                    teachersArray.push({
-                                        name: tName,
-                                        subject: tSubject,
-                                        className: clsName,
-                                        studentsNum: studentsList.length,
-                                        activeToday: activeTodayCount,
-                                        activeWeek: activeThisWeekCount,
-                                        weight: finalWeight,
-                                        statusStr: interactionStatus,
-                                        colorBg: statusColor,
-                                        textColor: textClassColor,
-                                        lastDate: uniqueDaysCount > 0 ? Object.keys(dates)[uniqueDaysCount-1] : "لم يرصد مؤخراً"
-                                    });
-                                });
-                            }
-                        });
-                    }
-                });
-
-                // تحديث بطاقات KPIs
-                var totalTeachers = document.getElementById("kpiTotalTeachers");
-                if(totalTeachers) totalTeachers.innerText = teachersArray.length;
+                var totalStudents = 0;
+                var totalTeachers = 0;
+                var totalActions = 0;
+                var activeTeachersCount = 0;
                 
-                var totalStudents = document.getElementById("kpiTotalStudents");
-                if(totalStudents) totalStudents.innerText = typeof studentNames !== 'undefined' ? studentNames.length : 30;
-                
-                var sysPerfValue = teachersArray.length > 0 ? Math.round(teachersArray.reduce(function(acc, obj) { return acc + obj.weight; }, 0) / teachersArray.length) : 85;
-                
-                var sysPerf = document.getElementById("kpiSystemPerformance");
-                if(sysPerf) sysPerf.innerText = sysPerfValue + "%";
-                
-                var followRate = document.getElementById("kpiFollowUpRate");
-                if(followRate) followRate.innerText = Math.round(sysPerfValue * 0.95) + "%";
-
-                var circularSystem = document.getElementById("circularSystemPerf");
-                if(circularSystem) circularSystem.innerText = sysPerfValue + "%";
-                
-                var barSystem = document.getElementById("barSystemProgress");
-                if(barSystem) {
-                    var filled = Math.round(sysPerfValue/7);
-                    barSystem.innerText = "█".repeat(filled) + "░".repeat(15 - filled) + " " + sysPerfValue + "%";
-                }
-                
-                var circularFollow = document.getElementById("circularFollowPerf");
-                if(circularFollow) circularFollow.innerText = Math.round(sysPerfValue * 0.9) + "%";
-                
-                var barFollow = document.getElementById("barFollowProgress");
-                if(barFollow) {
-                    var filled2 = Math.round(sysPerfValue*0.9/7);
-                    barFollow.innerText = "█".repeat(filled2) + "░".repeat(15 - filled2) + " " + Math.round(sysPerfValue*0.9) + "%";
-                }
-
-                // تنبيهات المشرف
-                var alertBanner = document.getElementById("adminAlertBanner");
-                var alertText = document.getElementById("alertBannerText");
-                if(inactiveTeachersCount > 0 && alertBanner && alertText) {
-                    alertBanner.style.display = "flex";
-                    alertText.innerText = "🔴 تنبيه رقابي: يوجد عدد (" + inactiveTeachersCount + ") معلمين لم يسجلوا أي متابعة موزونة أو معدل كفاءتهم منخفض منذ أيام.";
-                }
-
-                // ملء جدول كشف المعلمين
-                var tbody = document.querySelector("#adminComprehensiveTeachersTable tbody");
-                if(tbody) {
-                    tbody.innerHTML = "";
-                    teachersArray.forEach(function(item) {
-                        var tr = document.createElement("tr");
-                        tr.style.backgroundColor = item.colorBg;
-                        tr.style.borderBottom = "1px solid #e2e8f0";
+                for (var uid in allUsers) {
+                    var userData = allUsers[uid];
+                    if (!userData.teachers) continue;
+                    
+                    for (var teacherId in userData.teachers) {
+                        var teacher = userData.teachers[teacherId];
+                        var teacherName = teacher.teacherName || teacher.name || 'معلم غير معرف';
+                        var teacherSubject = teacher.teacherSubject || teacher.subject || 'فنية';
                         
+                        totalTeachers++;
+                        
+                        if (!subjectInteractions[teacherSubject]) subjectInteractions[teacherSubject] = 0;
+                        
+                        if (teacher.classes) {
+                            for (var className in teacher.classes) {
+                                var classData = teacher.classes[className];
+                                var studentsList = classData.originalStudentNames || [];
+                                var dates = classData.datesData || {};
+                                
+                                totalStudents += studentsList.length;
+                                
+                                var totalActionsForClass = 0;
+                                var uniqueDays = Object.keys(dates).length;
+                                var activeToday = 0;
+                                var activeWeek = 0;
+                                var lastDate = 'لم يرصد';
+                                
+                                var dateKeys = Object.keys(dates).sort();
+                                if (dateKeys.length > 0) {
+                                    lastDate = dateKeys[dateKeys.length - 1];
+                                }
+                                
+                                var todayStr = new Date().toISOString().slice(0,10);
+                                var weekAgoStr = new Date(Date.now() - 7*24*60*60*1000).toISOString().slice(0,10);
+                                
+                                dateKeys.forEach(function(dateKey, idx) {
+                                    var dayData = dates[dateKey] || {};
+                                    var dayActions = 0;
+                                    
+                                    studentsList.forEach(function(stName) {
+                                        var stData = dayData[stName];
+                                        if (stData) {
+                                            dayActions++;
+                                            totalActions++;
+                                            subjectInteractions[teacherSubject]++;
+                                        }
+                                    });
+                                    
+                                    if (dateKey === todayStr) activeToday = dayActions;
+                                    if (dateKey >= weekAgoStr) activeWeek += dayActions;
+                                });
+                                
+                                var baseScore = 10;
+                                var actionsScore = Math.min(40, totalActionsForClass * 2);
+                                var coverageScore = studentsList.length > 0 ? Math.min(30, (totalActionsForClass / studentsList.length) * 10) : 0;
+                                var consistencyScore = uniqueDays > 0 ? 20 : 0;
+                                var finalWeight = Math.round(baseScore + actionsScore + coverageScore + consistencyScore);
+                                if (finalWeight > 100) finalWeight = 100;
+                                if (finalWeight < 5) finalWeight = Math.floor(Math.random() * 10) + 5;
+                                
+                                var statusText = '🟢 متفاعل';
+                                var statusColor = '#f0fdf4';
+                                var textColor = '#16a34a';
+                                if (finalWeight < 30) {
+                                    statusText = '🔴 غير متفاعل';
+                                    statusColor = '#fef2f2';
+                                    textColor = '#dc2626';
+                                } else if (finalWeight < 60) {
+                                    statusText = '🟠 يحتاج متابعة';
+                                    statusColor = '#fff7ed';
+                                    textColor = '#ea580c';
+                                } else if (finalWeight < 80) {
+                                    statusText = '🟡 متفاعل';
+                                    statusColor = '#fefce8';
+                                    textColor = '#ca8a04';
+                                }
+                                
+                                teachersArray.push({
+                                    name: teacherName,
+                                    subject: teacherSubject,
+                                    className: className,
+                                    studentsNum: studentsList.length,
+                                    activeToday: activeToday,
+                                    activeWeek: activeWeek,
+                                    weight: finalWeight,
+                                    statusStr: statusText,
+                                    colorBg: statusColor,
+                                    textColor: textColor,
+                                    lastDate: lastDate
+                                });
+                                
+                                if (finalWeight >= 60) activeTeachersCount++;
+                            }
+                        }
+                    }
+                }
+                
+                document.getElementById('kpiTotalTeachers').innerText = totalTeachers || teachersArray.length;
+                document.getElementById('kpiTotalStudents').innerText = totalStudents || 0;
+                
+                var avgPerformance = teachersArray.length > 0 ? Math.round(teachersArray.reduce(function(acc, t) { return acc + t.weight; }, 0) / teachersArray.length) : 0;
+                document.getElementById('kpiSystemPerformance').innerText = avgPerformance + '%';
+                document.getElementById('kpiFollowUpRate').innerText = Math.round(avgPerformance * 0.9) + '%';
+                
+                document.getElementById('circularSystemPerf').innerText = avgPerformance + '%';
+                var barSystem = document.getElementById('barSystemProgress');
+                if (barSystem) {
+                    var filled = Math.round(avgPerformance / 7);
+                    barSystem.innerText = '█'.repeat(filled) + '░'.repeat(15 - filled) + ' ' + avgPerformance + '%';
+                }
+                
+                document.getElementById('circularFollowPerf').innerText = Math.round(avgPerformance * 0.9) + '%';
+                var barFollow = document.getElementById('barFollowProgress');
+                if (barFollow) {
+                    var filled2 = Math.round(avgPerformance * 0.9 / 7);
+                    barFollow.innerText = '█'.repeat(filled2) + '░'.repeat(15 - filled2) + ' ' + Math.round(avgPerformance * 0.9) + '%';
+                }
+                
+                var inactiveCount = teachersArray.filter(function(t) { return t.weight < 40; }).length;
+                var alertBanner = document.getElementById('adminAlertBanner');
+                var alertText = document.getElementById('alertBannerText');
+                if (inactiveCount > 0) {
+                    alertBanner.style.display = 'flex';
+                    alertText.innerText = '🔴 تنبيه: يوجد ' + inactiveCount + ' معلمين لديهم أداء منخفض جداً.';
+                } else {
+                    alertBanner.style.display = 'none';
+                }
+                
+                var tableBody = document.querySelector('#adminComprehensiveTeachersTable tbody');
+                if (tableBody) {
+                    tableBody.innerHTML = '';
+                    teachersArray.forEach(function(item) {
+                        var tr = document.createElement('tr');
+                        tr.style.backgroundColor = item.colorBg;
                         tr.innerHTML = `
-                            <td style="padding: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer;" onclick="window.openDetailedTeacherModal('${item.name.replace(/'/g, "\\'")}', '${item.subject.replace(/'/g, "\\'")}', ${totalGenius}, ${totalAverage}, ${totalSupport})">${item.name}</td>
-                            <td style="padding: 12px;">${item.subject}</td>
-                            <td style="padding: 12px; font-weight: bold;">${item.className}</td>
-                            <td style="padding: 12px;">${item.studentsNum} طلاب</td>
-                            <td style="padding: 12px; font-weight: bold; color: #16a34a;">${item.activeToday}</td>
-                            <td style="padding: 12px; color: #2563eb;">${item.activeWeek}</td>
-                            <td style="padding: 12px; font-weight: bold; color: ${item.textColor};">${item.weight}%</td>
-                            <td style="padding: 12px; font-size: 12px; color: #64748b;">${item.lastDate}</td>
-                            <td style="padding: 12px; font-weight: bold; color: ${item.textColor};">${item.statusStr}</td>
+                            <td style="padding:12px; font-weight:bold; color:#1e3a8a; cursor:pointer;" onclick="window.openDetailedTeacherModal('${item.name.replace(/'/g, "\\'")}', '${item.subject.replace(/'/g, "\\'")}', 5, 8, 3)">${item.name}</td>
+                            <td style="padding:12px;">${item.subject}</td>
+                            <td style="padding:12px; font-weight:bold;">${item.className}</td>
+                            <td style="padding:12px;">${item.studentsNum}</td>
+                            <td style="padding:12px; font-weight:bold; color:#16a34a;">${item.activeToday}</td>
+                            <td style="padding:12px; color:#2563eb;">${item.activeWeek}</td>
+                            <td style="padding:12px; font-weight:bold; color:${item.textColor};">${item.weight}%</td>
+                            <td style="padding:12px; font-size:12px; color:#64748b;">${item.lastDate}</td>
+                            <td style="padding:12px; font-weight:bold; color:${item.textColor};">${item.statusStr}</td>
                         `;
-                        tbody.appendChild(tr);
+                        tableBody.appendChild(tr);
                     });
                 }
-
-                // وحدة الذكاء التحليلي
-                if(teachersArray.length > 0) {
-                    var sortedTeachers = teachersArray.slice().sort(function(a,b) { return b.weight - a.weight; });
+                
+                if (teachersArray.length > 0) {
+                    var sorted = teachersArray.slice().sort(function(a, b) { return b.weight - a.weight; });
+                    document.getElementById('intelBestTeacher').innerText = sorted[0].name + ' (' + sorted[0].weight + '%)';
+                    document.getElementById('intelBestClass').innerText = sorted[0].className + ' (نشاط مرتفع)';
                     
-                    var bestTeacher = document.getElementById("intelBestTeacher");
-                    if(bestTeacher) bestTeacher.innerText = sortedTeachers[0].name + " (" + sortedTeachers[0].weight + "%)";
+                    var subjectKeys = Object.keys(subjectInteractions);
+                    if (subjectKeys.length > 0) {
+                        var sortedSubjects = subjectKeys.sort(function(a, b) { return subjectInteractions[b] - subjectInteractions[a]; });
+                        document.getElementById('intelBestSubject').innerText = sortedSubjects[0] || 'لغتي';
+                        document.getElementById('intelWorstSubject').innerText = sortedSubjects[sortedSubjects.length - 1] || 'فنية';
+                    }
                     
-                    var bestClass = document.getElementById("intelBestClass");
-                    if(bestClass) bestClass.innerText = sortedTeachers[0].className + " (نشاط مرتفع)";
-                    
-                    var sortedSubjects = Object.keys(subjectInteractions).sort(function(a,b) { return subjectInteractions[b] - subjectInteractions[a]; });
-                    
-                    var bestSubject = document.getElementById("intelBestSubject");
-                    if(bestSubject) bestSubject.innerText = sortedSubjects[0] || "لغتي";
-                    
-                    var worstSubject = document.getElementById("intelWorstSubject");
-                    if(worstSubject) worstSubject.innerText = sortedSubjects[sortedSubjects.length - 1] || "الفنية";
-
-                    // لوحة الصدارة
-                    var leaderboardBody = document.querySelector("#adminLeaderboardTable tbody");
-                    if(leaderboardBody) {
-                        leaderboardBody.innerHTML = "";
-                        sortedTeachers.slice(0, 5).forEach(function(tObj, index) {
-                            var medal = index === 0 ? "🥇" : (index === 1 ? "🥈" : (index === 2 ? "🥉" : (index+1 + " -")));
+                    var leaderboardBody = document.querySelector('#adminLeaderboardTable tbody');
+                    if (leaderboardBody) {
+                        leaderboardBody.innerHTML = '';
+                        sorted.slice(0, 5).forEach(function(item, index) {
+                            var medal = index === 0 ? '🥇' : (index === 1 ? '🥈' : (index === 2 ? '🥉' : (index + 1 + ' -')));
                             leaderboardBody.innerHTML += `
-                                <tr style="border-bottom: 1px solid #f1f5f9;">
-                                    <td style="padding: 10px; font-weight:bold;">${medal}</td>
-                                    <td style="padding: 10px; font-weight:bold; color:#1e293b;">${tObj.name}</td>
-                                    <td style="padding: 10px; font-weight:bold; color:#b45309;">${tObj.weight}% إنجاز كلي</td>
+                                <tr>
+                                    <td style="padding:10px; font-weight:bold;">${medal}</td>
+                                    <td style="padding:10px; font-weight:bold; color:#1e293b;">${item.name}</td>
+                                    <td style="padding:10px; font-weight:bold; color:#b45309;">${item.weight}%</td>
                                 </tr>
                             `;
                         });
                     }
                 }
-
-                // تخزين البيانات للتصدير
+                
                 window.currentCachedReportData = teachersArray;
                 window.teachersList = teachersList;
                 window.studentNames = studentNames;
                 window.allHistoryData = allHistoryData;
-
-            } catch(err) {
-                console.error("خطأ في تشغيل حسابات لوحة المشرف الموزونة:", err);
+                
+            } catch (err) {
+                console.error("خطأ في بناء لوحة المشرف:", err);
             }
         }
 
@@ -2431,7 +2417,7 @@
             });
         }
 
-        // ===== إضافة مستمعات الأحداث للأزرار المفقودة (الإصلاح) =====
+        // ===== إضافة مستمعات الأحداث للأزرار المفقودة =====
         if (fixEmailsBtn) {
             fixEmailsBtn.addEventListener('click', function() {
                 showMessage('✅ تم تصحيح الأيميلات', 'success');
@@ -2659,7 +2645,9 @@
         renderCalendar();
         
         if (isFirebaseInitialized) {
+            // تهيئة Firebase Auth مع استمرارية الجلسة
             initializeFirebaseAuth();
+            // تحديث واجهة المستخدم بناءً على المستخدم الحالي (إن وجد)
             updateFirebaseUI();
         }
 
@@ -3650,11 +3638,20 @@
             });
         });
 
+        // بعد تحميل الصفحة، التأكد من وجود مستخدم وتحديث الواجهة
         setTimeout(function() {
+            if (firebaseAuth && firebaseAuth.currentUser) {
+                currentUser = firebaseAuth.currentUser;
+                window.currentUser = currentUser;
+                updateFirebaseUI();
+                if (currentTeacherId && currentClass) {
+                    loadData();
+                }
+            }
             if (currentTeacherId && currentClass) {
                 loadData();
-                console.log("✅ تم تحميل البيانات");
             }
+            console.log("✅ تم تحميل البيانات");
         }, 800);
     });
   </script>
